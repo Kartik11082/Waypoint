@@ -1,4 +1,4 @@
-# DISPATCH — Score Service
+# Waypoint — Score Service
 # Port: 8001
 # No external dependencies
 import math

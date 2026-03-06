@@ -23,7 +23,7 @@ export default function Loading({ message }) {
                     color: 'var(--muted)',
                 }}
             >
-                DISPATCH
+                Waypoint
             </span>
 
             <span

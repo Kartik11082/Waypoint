@@ -1,4 +1,4 @@
-# DISPATCH — Story Service
+# Waypoint — Story Service
 # Port: 8002
 # Deps: NewsOrg API, AWS Bedrock (Claude Haiku)
 import json, os
@@ -15,7 +15,7 @@ from pydantic import BaseModel
 load_dotenv(find_dotenv(usecwd=True))
 
 NEWS_API_KEY = os.getenv("NEWS_API_KEY", "")
-AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
+AWS_REGION = os.getenv("AWS_REGION", "")
 BEDROCK_MODEL_ID = os.getenv("BEDROCK_MODEL_ID", "")
 CACHE_DIR = Path("./cache")
 DAILY_BEDROCK_LIMIT = 60

@@ -1,4 +1,4 @@
-# DISPATCH — Clue Service
+# Waypoint — Clue Service
 # Port: 8003
 # Deps: Story Service (:8002), AWS Bedrock (Claude Haiku)
 # Security: never returns lat/lng to caller
@@ -15,7 +15,7 @@ from pydantic import BaseModel
 
 load_dotenv(find_dotenv(usecwd=True))
 
-AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
+AWS_REGION = os.getenv("AWS_REGION", "")
 BEDROCK_MODEL_ID = os.getenv("BEDROCK_MODEL_ID", "")
 STORY_SERVICE_URL = os.getenv("STORY_SERVICE_URL", "http://localhost:8002")
 CACHE_DIR = Path("./cache")

@@ -49,7 +49,7 @@ export default function Splash({ onStart }) {
                     ...stagger(80),
                 }}
             >
-                DISPATCH
+                Waypoint
             </h1>
 
             <p

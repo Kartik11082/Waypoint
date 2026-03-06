@@ -21,7 +21,7 @@ function PanelHeader({ roundNumber }) {
                     color: 'var(--primary)',
                 }}
             >
-                DISPATCH
+                Waypoint
             </span>
             <span
                 style={{
@@ -146,7 +146,7 @@ export default function Game({
                         disabled={!pin || submitted}
                         onClick={onSubmit}
                     >
-                        SUBMIT DISPATCH
+                        SUBMIT Waypoint
                     </button>
                 </div>
                 <div className="divider" />

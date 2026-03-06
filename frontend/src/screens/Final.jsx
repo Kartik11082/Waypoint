@@ -29,7 +29,7 @@ export default function Final({ playerName, scores, roundResults, onPlayAgain })
 
     const handleShare = () => {
         const today = new Date().toISOString().split('T')[0];
-        const text = `DISPATCH · ${today} · ${totalScore}pts · Rank #${rank}/5`;
+        const text = `Waypoint · ${today} · ${totalScore}pts · Rank #${rank}/5`;
         navigator.clipboard.writeText(text).then(() => {
             setShowToast(true);
             setTimeout(() => setShowToast(false), 2500);
@@ -66,7 +66,7 @@ export default function Final({ playerName, scores, roundResults, onPlayAgain })
                         marginBottom: 'var(--s6)',
                     }}
                 >
-                    DISPATCH
+                    Waypoint
                 </span>
 
                 {/* Rank headline */}
