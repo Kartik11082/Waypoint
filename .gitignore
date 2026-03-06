@@ -1,0 +1,47 @@
+# --- System Files ---
+.DS_Store
+Thumbs.db
+*.swp
+*.bak
+
+# --- Python / FastAPI Services ---
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+env/
+.env
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Service-Specific Cache (Stage 2 & 3)
+# We ignore the actual JSON data so your repo stays light
+dispatch/services/story/cache/*.json
+dispatch/services/clue/cache/*.json
+
+# --- Frontend (React/Vite) ---
+dispatch/frontend/node_modules/
+dispatch/frontend/dist/
+dispatch/frontend/dist-ssr/
+dispatch/frontend/*.local
+dispatch/frontend/.eslintcache
+
+# --- AWS & Environment ---
+.aws/
+credentials
+*.pem
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# --- Build & IDE ---
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+build/
+out/
