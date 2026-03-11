@@ -1,46 +1,24 @@
 # Waypoint — Score Service
 # Port: 8001
-# No external dependencies
 import math
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
 
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 MAX_SCORE = 5000
-CLUE_MULTIPLIERS: dict[int, float] = {1: 1.00, 2: 0.70, 3: 0.45}
+CLUE_MULTIPLIERS = {1: 1.00, 2: 0.70, 3: 0.45}
 
 
-# ── Models ──────────────────────────────────────────────
-class ScoreRequest(BaseModel):
-    lat: float
-    lng: float
-    correct_lat: float
-    correct_lng: float
-    clues_used: int = Field(..., ge=1, le=3)
-    seconds_taken: float = Field(..., ge=0, le=60)
-
-
-class ScoreResponse(BaseModel):
-    score: int
-    distance_km: float
-    verdict: str
-    verdict_class: str
-    breakdown: dict
-
-
-# ── Haversine ───────────────────────────────────────────
-def haversine(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
-    """Return distance in km between two lat/lng points."""
+def haversine(lat1, lng1, lat2, lng2):
+    """Distance in km between two points."""
     R = 6371
     lat1, lng1, lat2, lng2 = map(math.radians, [lat1, lng1, lat2, lng2])
     dlat, dlng = lat2 - lat1, lng2 - lng1
@@ -51,8 +29,7 @@ def haversine(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
     return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
-# ── Verdict ─────────────────────────────────────────────
-def get_verdict(score: int) -> tuple[str, str]:
+def get_verdict(score):
     if score >= 3500:
         return "PINPOINT", "great"
     if score >= 2000:
@@ -62,30 +39,36 @@ def get_verdict(score: int) -> tuple[str, str]:
     return "OFF THE MARK", "miss"
 
 
-# ── Endpoints ───────────────────────────────────────────
-@app.post("/score", response_model=ScoreResponse)
-def calculate_score(req: ScoreRequest) -> ScoreResponse:
-    distance_km = round(
-        haversine(req.lat, req.lng, req.correct_lat, req.correct_lng), 1
-    )
+@app.post("/score")
+async def calculate_score(request: Request):
+    body = await request.json()
+
+    lat = float(body["lat"])
+    lng = float(body["lng"])
+    correct_lat = float(body["correct_lat"])
+    correct_lng = float(body["correct_lng"])
+    clues_used = int(body["clues_used"])
+    seconds_taken = float(body["seconds_taken"])
+
+    distance_km = round(haversine(lat, lng, correct_lat, correct_lng), 1)
     dist_score = math.exp(-distance_km / 2000)
-    clue_mult = CLUE_MULTIPLIERS[req.clues_used]
-    time_mult = (
-        1.10 if req.seconds_taken < 15 else 1.05 if req.seconds_taken < 30 else 1.00
-    )
+    clue_mult = CLUE_MULTIPLIERS.get(clues_used, 1.0)
+    time_mult = 1.10 if seconds_taken < 15 else 1.05 if seconds_taken < 30 else 1.00
     score = max(0, int(MAX_SCORE * dist_score * clue_mult * time_mult))
+
     verdict, verdict_class = get_verdict(score)
-    return ScoreResponse(
-        score=score,
-        distance_km=distance_km,
-        verdict=verdict,
-        verdict_class=verdict_class,
-        breakdown={
+
+    return {
+        "score": score,
+        "distance_km": distance_km,
+        "verdict": verdict,
+        "verdict_class": verdict_class,
+        "breakdown": {
             "dist_score": round(dist_score, 4),
             "clue_multiplier": clue_mult,
             "time_multiplier": time_mult,
         },
-    )
+    }
 
 
 @app.get("/health")
