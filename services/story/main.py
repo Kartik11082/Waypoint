@@ -33,9 +33,16 @@ SKIP_KEYWORDS = [
     "podcast",
 ]
 
-LOCATION_PROMPT = """Extract location from this news article. Not like "the washington post", but the actual location of the event.
-Return ONLY JSON: {{"city":"string or null","country":"string","lat":number,"lng":number,"confidence":"high|medium|low"}}
-No explanation. No markdown.
+LOCATION_PROMPT = """Extract the actual location where the event in the news article occurred. Ignore publisher or source locations (e.g., “The Washington Post”).
+
+Return ONLY valid JSON in this format:
+{"city":"string or null","country":"string","lat":number,"lng":number,"confidence":"high|medium|low"}
+
+Rules:
+- Identify the event location from the article content.
+- If the city is not mentioned.
+- Use best-guess coordinates for the location.
+- Confidence reflects how clearly the location is stated in the article.
 
 Headline: {headline}
 Body: {body}"""
