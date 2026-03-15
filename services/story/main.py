@@ -3,7 +3,7 @@
 # Deps: NewsAPI, AWS Bedrock (Claude Haiku)
 import json
 import os
-from datetime import date
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 import boto3
@@ -107,19 +107,27 @@ def is_geocodable(article):
 
 
 def fetch_raw_articles():
+    # Calculate exactly 24 hours ago (News API expects YYYY-MM-DD or ISO format)
+    # Using UTC to align with standard server times
+    yesterday = (datetime.utcnow() - timedelta(days=1)).strftime("%Y-%m-%d")
+
     params = {
-        "category": "general",
+        "q": "world OR global OR international",
         "language": "en",
+        "from": yesterday,  # Restricts the search to the last ~24 hours
+        "sortBy": "popularity",  # Surfaces the most read/shared daily news first
         "pageSize": 30,
         "apiKey": NEWS_API_KEY,
     }
-    r = httpx.get("https://newsapi.org/v2/top-headlines", params=params, timeout=10)
+
+    r = httpx.get("https://newsapi.org/v2/everything", params=params, timeout=10)
     print(
         f"[NEWS] status={r.status_code}  articles={len(r.json().get('articles', []))}"
     )
     r.raise_for_status()
 
     articles = []
+    print(r.json().get("articles")[0].keys())
     for i, a in enumerate(r.json().get("articles", [])):
         body = (a.get("description") or "") + " " + (a.get("content") or "")
         if len(body) > 80:
@@ -134,6 +142,36 @@ def fetch_raw_articles():
             )
     print(f"[NEWS] {len(articles)} articles passed body-length filter")
     return articles
+
+
+# def fetch_raw_articles():
+#     params = {
+#         "category": "general",
+#         "language": "en",
+#         "pageSize": 30,
+#         "apiKey": NEWS_API_KEY,
+#     }
+#     r = httpx.get("https://newsapi.org/v2/top-headlines", params=params, timeout=10)
+#     print(
+#         f"[NEWS] status={r.status_code}  articles={len(r.json().get('articles', []))}"
+#     )
+#     r.raise_for_status()
+
+#     articles = []
+#     for i, a in enumerate(r.json().get("articles", [])):
+#         body = (a.get("description") or "") + " " + (a.get("content") or "")
+#         if len(body) > 80:
+#             articles.append(
+#                 {
+#                     "id": str(i),
+#                     "headline": a.get("title") or "",
+#                     "body": body,
+#                     "source": a["source"]["name"],
+#                     "published_at": a["publishedAt"],
+#                 }
+#             )
+#     print(f"[NEWS] {len(articles)} articles passed body-length filter")
+#     return articles
 
 
 # ── Bedrock location extraction ─────────────────────────
