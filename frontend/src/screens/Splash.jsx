@@ -90,7 +90,7 @@ export default function Splash({ onStart }) {
                 <input
                     ref={inputRef}
                     type="text"
-                    placeholder="e.g. MORGAN K."
+                    placeholder="e.g. John Doe"
                     maxLength={20}
                     autoComplete="off"
                     value={name}

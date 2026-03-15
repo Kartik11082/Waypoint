@@ -36,7 +36,7 @@ SKIP_KEYWORDS = [
 LOCATION_PROMPT = """Extract the actual location where the event in the news article occurred. Ignore publisher or source locations (e.g., “The Washington Post”).
 
 Return ONLY valid JSON in this format:
-{"city":"string or null","country":"string","lat":number,"lng":number,"confidence":"high|medium|low"}
+"city":"string or null","country":"string","lat":number,"lng":number,"confidence":"high|medium|low"
 
 Rules:
 - Identify the event location from the article content.
