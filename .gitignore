@@ -20,6 +20,8 @@ htmlcov/
 # Service-Specific Cache
 services/story/cache/
 services/clue/cache/
+backend/cache/
+backend/waypoint.db
 
 # --- Frontend (React/Vite) ---
 frontend/node_modules/

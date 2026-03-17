@@ -16,20 +16,11 @@ export default function Final({ playerName, scores, roundResults, onPlayAgain })
     const [showToast, setShowToast] = useState(false);
 
     const totalScore = scores?.find((s) => s.isPlayer)?.score || 0;
-    const rank = (scores || []).findIndex((s) => s.isPlayer) + 1;
-    const headline = RANK_HEADLINES[rank] || 'FILED & CLOSED';
-
-    // Podium: 2nd, 1st, 3rd
-    const top3 = (scores || []).slice(0, 3);
-    const podiumOrder = top3.length >= 3 ? [top3[1], top3[0], top3[2]] : top3;
-    const podiumHeights = { 0: '72px', 1: '100px', 2: '52px' };
-    const podiumBg = { 0: 'var(--surface2)', 1: 'var(--primary)', 2: 'var(--surface2)' };
-    const podiumRankColor = { 0: 'var(--muted)', 1: 'var(--bg)', 2: 'var(--muted)' };
-    const podiumRanks = [2, 1, 3];
+    const headline = 'MISSION COMPLETE';
 
     const handleShare = () => {
         const today = new Date().toISOString().split('T')[0];
-        const text = `Waypoint · ${today} · ${totalScore}pts · Rank #${rank}/5`;
+        const text = `Waypoint · ${today} · ${totalScore}pts`;
         navigator.clipboard.writeText(text).then(() => {
             setShowToast(true);
             setTimeout(() => setShowToast(false), 2500);
@@ -93,75 +84,32 @@ export default function Final({ playerName, scores, roundResults, onPlayAgain })
                         marginTop: 'var(--s3)',
                     }}
                 >
-                    {playerName} · {totalScore.toLocaleString()} pts · Rank #{rank} of 5
+                    {playerName} · {totalScore.toLocaleString()} pts
                 </p>
 
-                {/* Podium */}
+                {/* Single Player Result Display */}
                 <div
                     style={{
                         display: 'flex',
-                        alignItems: 'flex-end',
-                        gap: 'var(--s1)',
-                        justifyContent: 'center',
+                        flexDirection: 'column',
+                        alignItems: 'center',
                         marginBottom: 'var(--s7)',
+                        background: 'var(--surface)',
+                        padding: 'var(--s5) var(--s8)',
+                        border: '1px solid var(--border)',
                     }}
                 >
-                    {podiumOrder.map((entry, i) => (
-                        <div
-                            key={entry?.name || i}
-                            style={{
-                                width: '160px',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                            }}
-                        >
-                            <span
-                                style={{
-                                    fontFamily: 'var(--font-ui)',
-                                    fontSize: '10px',
-                                    color: entry?.isPlayer ? 'var(--gold)' : 'var(--muted)',
-                                    whiteSpace: 'nowrap',
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    maxWidth: '100%',
-                                    marginBottom: 'var(--s1)',
-                                }}
-                            >
-                                {entry?.name}
-                            </span>
-                            <span
-                                style={{
-                                    fontFamily: 'var(--font-display)',
-                                    fontSize: '20px',
-                                    color: entry?.isPlayer ? 'var(--gold)' : 'var(--primary)',
-                                    marginBottom: 'var(--s1)',
-                                }}
-                            >
-                                {entry?.score?.toLocaleString()}
-                            </span>
-                            <div
-                                style={{
-                                    width: '100%',
-                                    height: podiumHeights[i],
-                                    background: podiumBg[i],
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                }}
-                            >
-                                <span
-                                    style={{
-                                        fontFamily: 'var(--font-display)',
-                                        fontSize: '28px',
-                                        color: podiumRankColor[i],
-                                    }}
-                                >
-                                    {podiumRanks[i]}
-                                </span>
-                            </div>
-                        </div>
-                    ))}
+                    <span className="label" style={{ marginBottom: 'var(--s2)' }}>FINAL SCORE</span>
+                    <span
+                        style={{
+                            fontFamily: 'var(--font-display)',
+                            fontSize: '64px',
+                            color: 'var(--gold)',
+                            lineHeight: 1,
+                        }}
+                    >
+                        {totalScore.toLocaleString()}
+                    </span>
                 </div>
 
                 {/* Round Breakdown */}

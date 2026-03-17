@@ -1,37 +1,13 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { getStories, getClues, postScore } from '../api/client';
+import { getStories, getClues, postScore, recordPin, saveResult, getPlayerId } from '../api/client';
 import { useTimer } from './useTimer';
-
-const BOTS = [
-    { name: 'RILEY H.', accuracy: 0.88 },
-    { name: 'SASHA M.', accuracy: 0.65 },
-    { name: 'ALEX T.', accuracy: 0.45 },
-    { name: 'DREW V.', accuracy: 0.72 },
-];
 
 const LOADING_MESSAGES = [
     'Scanning today\'s headlines...',
     'Extracting story locations...',
     'Generating clues with AI...',
-    'Briefing your competitors...',
+    'Preparing the terrain...',
 ];
-
-async function botGuessScore(bot, correctLat, correctLng) {
-    const maxOffset = 3000 * (1 - bot.accuracy);
-    const dist = maxOffset * (0.3 + Math.random() * 0.7);
-    const cluesUsed = bot.accuracy > 0.8 ? 1 : bot.accuracy > 0.6 ? 2 : 3;
-    const timeTaken = 10 + Math.random() * 45;
-
-    const result = await postScore({
-        lat: correctLat + (Math.random() - 0.5) * (dist / 111),
-        lng: correctLng + (Math.random() - 0.5) * (dist / 111),
-        correct_lat: correctLat,
-        correct_lng: correctLng,
-        clues_used: cluesUsed,
-        seconds_taken: timeTaken,
-    });
-    return result.score;
-}
 
 export function useGame() {
     const [playerName, setPlayerName] = useState('');
@@ -47,7 +23,6 @@ export function useGame() {
     const [roundResults, setRoundResults] = useState([]);
     const [scores, setScores] = useState([]);
 
-    const botsRef = useRef(BOTS.map((b) => ({ ...b, score: 0, isPlayer: false })));
     const playerScoreRef = useRef(0);
     const storiesRef = useRef([]);
     const msgIntervalRef = useRef(null);
@@ -59,12 +34,9 @@ export function useGame() {
     const timer = useTimer(60, handleExpire);
 
     const buildScoreboard = () => {
-        const all = [
-            { name: playerName, score: playerScoreRef.current, isPlayer: true },
-            ...botsRef.current.map((b) => ({ name: b.name, score: b.score, isPlayer: false })),
+        return [
+            { name: playerName, score: playerScoreRef.current, isPlayer: true }
         ];
-        all.sort((a, b) => b.score - a.score);
-        return all;
     };
 
     const startRound = async (roundIndex) => {
@@ -90,7 +62,6 @@ export function useGame() {
     const startGame = async (name) => {
         setPlayerName(name);
         setScreen('loading');
-        botsRef.current = BOTS.map((b) => ({ ...b, score: 0, isPlayer: false }));
         playerScoreRef.current = 0;
         setRoundResults([]);
         setScores([]);
@@ -146,24 +117,26 @@ export function useGame() {
 
         playerScoreRef.current += result.score;
 
-        // Bot scores (concurrent)
-        const botScores = await Promise.all(
-            botsRef.current.map((bot) => botGuessScore(bot, story.lat, story.lng))
-        );
-
-        botsRef.current.forEach((bot, i) => {
-            bot.score += botScores[i];
+        // Fire-and-forget: record pin drop for Wire Room
+        recordPin({
+            story_id: story.id,
+            lat: pin.lat,
+            lng: pin.lng,
+            clues_used: cluesRevealed,
+            score: result.score,
         });
 
         // Build round result record
         const roundRecord = {
             round: currentRound + 1,
+            story_id: story.id,
             headline: story.headline,
             score: result.score,
             distance_km: result.distance_km,
             verdict: result.verdict,
             verdict_class: result.verdict_class,
             cluesUsed: cluesRevealed,
+            category: clues?.category || 'POLITICS',
         };
 
         const newRoundResults = [...roundResults, roundRecord];
@@ -186,6 +159,17 @@ export function useGame() {
 
     const nextRound = () => {
         if (currentRound >= 4) {
+            // Fire-and-forget: save daily result for stats
+            saveResult({
+                player_id: getPlayerId(),
+                total_score: playerScoreRef.current,
+                rounds: [...roundResults].map((r) => ({
+                    story_id: r.story_id,
+                    category: r.category,
+                    score: r.score,
+                    verdict: r.verdict,
+                })),
+            });
             setScreen('final');
         } else {
             startRound(currentRound + 1);

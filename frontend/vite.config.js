@@ -5,20 +5,9 @@ export default defineConfig({
     plugins: [react()],
     server: {
         proxy: {
-            '/api/stories': {
-                target: 'http://127.0.0.1:8002',
+            '/api': {
+                target: 'http://127.0.0.1:8000',
                 changeOrigin: true,
-                rewrite: (path) => path.replace(/^\/api/, ''),
-            },
-            '/api/clues': {
-                target: 'http://127.0.0.1:8003',
-                changeOrigin: true,
-                rewrite: (path) => path.replace(/^\/api/, ''),
-            },
-            '/api/score': {
-                target: 'http://127.0.0.1:8001',
-                changeOrigin: true,
-                rewrite: (path) => path.replace(/^\/api/, ''),
             },
         },
     },

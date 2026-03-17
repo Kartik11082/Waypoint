@@ -171,31 +171,11 @@ export default function Result({
                     style={{
                         padding: 'var(--s4) var(--s6)',
                         display: 'flex',
-                        justifyContent: 'space-between',
+                        justifyContent: 'center',
                         alignItems: 'center',
                     }}
                 >
-                    <div
-                        style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '2px',
-                        }}
-                    >
-                        {top3.map((entry, i) => (
-                            <span
-                                key={entry.name}
-                                style={{
-                                    fontFamily: 'var(--font-ui)',
-                                    fontSize: '10px',
-                                    color: entry.isPlayer ? 'var(--gold)' : 'var(--muted)',
-                                }}
-                            >
-                                {i + 1}. {entry.name} — {entry.score.toLocaleString()}
-                            </span>
-                        ))}
-                    </div>
-                    <button className="btn-primary" onClick={onNext}>
+                    <button className="btn-primary" onClick={onNext} style={{ width: '100%' }}>
                         {isLastRound ? 'SEE RESULTS →' : 'NEXT ROUND →'}
                     </button>
                 </div>
