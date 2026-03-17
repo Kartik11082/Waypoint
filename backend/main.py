@@ -24,6 +24,7 @@ RATE_WINDOW = 60
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     from database import init_db
+
     init_db()
 
     print("Waypoint backend running on :8000")
@@ -56,7 +57,7 @@ async def log_requests(request: Request, call_next):
     start = time.time()
     response = await call_next(request)
     ms = round((time.time() - start) * 1000)
-    print(f"[{request.method}] {request.url.path} → {response.status_code} ({ms}ms)")
+    print(f"[{request.method}] {request.url.path} -> {response.status_code} ({ms}ms)")
     return response
 
 
