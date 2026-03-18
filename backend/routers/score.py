@@ -1,5 +1,6 @@
-# Waypoint — Score router
-# POST /score: calculates distance-based score from a player's guess.
+# ── score.py ──
+# Role: Calculates distance-based score from a player's guess.
+# Depends on: fastapi, math
 import math
 
 from fastapi import APIRouter, Request
@@ -7,13 +8,21 @@ from fastapi.responses import JSONResponse
 
 router = APIRouter()
 
+# Scoring constants — tuned for ~5000 max per round
+# Adjust MAX_SCORE and DECAY_RATE to rebalance difficulty
 MAX_SCORE = 5000
+DECAY_RATE = 2000   # km at which score halves (~exp decay)
 CLUE_MULTIPLIERS = {1: 1.00, 2: 0.70, 3: 0.45}
 REQUIRED_FIELDS = ["lat", "lng", "correct_lat", "correct_lng", "clues_used", "seconds_taken"]
 
+TIME_THRESHOLD_FAST = 15 # Seconds for fast bonus
+TIME_THRESHOLD_MED = 30  # Seconds for medium bonus
+TIME_MULT_FAST = 1.10    # 10% bonus for fast answer
+TIME_MULT_MED = 1.05     # 5% bonus for medium answer
 
+
+# Distance in km between two points on Earth
 def haversine(lat1, lng1, lat2, lng2):
-    """Distance in km between two points on Earth."""
     R = 6371
     lat1, lng1, lat2, lng2 = map(math.radians, [lat1, lng1, lat2, lng2])
     dlat, dlng = lat2 - lat1, lng2 - lng1
@@ -24,6 +33,7 @@ def haversine(lat1, lng1, lat2, lng2):
     return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
+# Maps a numerical score to a qualitative text verdict
 def get_verdict(score):
     if score >= 3500:
         return "PINPOINT", "great"
@@ -34,9 +44,8 @@ def get_verdict(score):
     return "OFF THE MARK", "miss"
 
 
+# Distance in km from a point to the nearest edge of a bounding box
 def distance_to_box(lat, lng, sw_lat, sw_lng, ne_lat, ne_lng):
-    """Distance in km from a point to the nearest edge of a bounding box.
-    Returns 0 if the point is inside the box."""
     if sw_lat <= lat <= ne_lat and sw_lng <= lng <= ne_lng:
         return 0.0
 
@@ -46,6 +55,7 @@ def distance_to_box(lat, lng, sw_lat, sw_lng, ne_lat, ne_lng):
     return haversine(lat, lng, clamped_lat, clamped_lng)
 
 
+# Computes final score using distance, clue, and time penalties
 @router.post("/score")
 async def calculate_score(request: Request):
     body = await request.json()
@@ -78,9 +88,9 @@ async def calculate_score(request: Request):
     else:
         distance_km = round(haversine(lat, lng, correct_lat, correct_lng), 1)
 
-    dist_score = math.exp(-distance_km / 2000)
+    dist_score = math.exp(-distance_km / DECAY_RATE)
     clue_mult = CLUE_MULTIPLIERS[clues_used]
-    time_mult = 1.10 if seconds_taken < 15 else 1.05 if seconds_taken < 30 else 1.00
+    time_mult = TIME_MULT_FAST if seconds_taken < TIME_THRESHOLD_FAST else TIME_MULT_MED if seconds_taken < TIME_THRESHOLD_MED else 1.00
     score = max(0, int(MAX_SCORE * dist_score * clue_mult * time_mult))
 
     verdict, verdict_class = get_verdict(score)

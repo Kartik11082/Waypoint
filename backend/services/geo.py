@@ -1,5 +1,6 @@
-# Waypoint — Location extraction via AI (Bedrock or OpenRouter)
-# Pre-filters articles and extracts lat/lng using the configured LLM.
+# ── geo.py ──
+# Role: Pre-filters articles and extracts lat/lng using the configured LLM.
+# Depends on: json, services.llm, services.cache
 import json
 
 from services.llm import call_llm
@@ -44,8 +45,8 @@ Headline: {headline}
 Body: {body}"""
 
 
+# Checks if an article is likely to contain a geocodable location
 def is_geocodable(article):
-    """Check if an article is likely to contain a geocodable location."""
     text = (article["headline"] + " " + article["body"]).lower()
     if any(kw in text for kw in SKIP_KEYWORDS):
         return False
@@ -57,15 +58,13 @@ def is_geocodable(article):
     return True
 
 
+# Extracts bounding box location from an article, with per-article caching
 def extract_location(article):
-    """Extract bounding box location from an article, with per-article caching."""
     cached = read_item_cache("loc", article["id"])
     if cached:
-        print(f"[LLM] CACHED: '{article['headline'][:50]}'")
         return cached
 
     if get_daily_call_count() >= DAILY_LLM_LIMIT:
-        print("[LIMIT] Daily LLM limit reached, skipping")
         return None
 
     prompt = LOCATION_PROMPT.format(headline=article["headline"], body=article["body"])
@@ -76,13 +75,8 @@ def extract_location(article):
             system="You are a geography extraction assistant. Return only valid JSON, no markdown, no explanation.",
             max_tokens=200,
         )
-        count = increment_call_count()
+        increment_call_count()
         loc = json.loads(raw_text)
-
-        print(
-            f"[LLM] Call {count}/{DAILY_LLM_LIMIT} | "
-            f"'{article['headline'][:50]}' -> {loc.get('city')}, {loc.get('country')}"
-        )
 
         # Reject low confidence
         if loc.get("confidence") == "low":

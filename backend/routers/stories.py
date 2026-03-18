@@ -1,6 +1,6 @@
-# Waypoint — Stories router
-# GET /stories: returns daily list of geocoded news stories.
-# GET /stories/{story_id}: returns a single story by ID.
+# ── stories.py ──
+# Role: Returns the daily list of geocoded news stories.
+# Depends on: fastapi, services.cache, services.geo, services.news
 from fastapi import APIRouter, HTTPException
 
 from services.cache import read_cache, write_cache
@@ -10,52 +10,53 @@ from services.news import fetch_raw_articles
 router = APIRouter()
 
 
+# Builds or retrieves today's story list from cache
 def build_stories():
     """Build or retrieve today's story list from cache."""
     cached = read_cache("stories")
     if cached and len(cached) >= 5:
-        print(f"[BUILD] Serving from daily cache: {len(cached)} stories")
         return cached, f"cache ({len(cached)} stories)"
 
     raw = fetch_raw_articles()
     geocodable = [a for a in raw if is_geocodable(a)]
-    print(f"[BUILD] {len(geocodable)}/{len(raw)} passed pre-filter, processing 1-by-1...")
 
     stories = []
     for article in geocodable:
         loc = extract_location(article)
         if not loc:
             continue
-        stories.append({
-            "id": article["id"],
-            "headline": article["headline"],
-            "body": article["body"],
-            "source": article["source"],
-            "published_at": article["published_at"],
-            "lat": loc["lat"],
-            "lng": loc["lng"],
-            "sw_lat": loc["sw_lat"],
-            "sw_lng": loc["sw_lng"],
-            "ne_lat": loc["ne_lat"],
-            "ne_lng": loc["ne_lng"],
-            "city": loc.get("city"),
-            "country": loc["country"],
-            "confidence": loc["confidence"],
-        })
-        print(f"[BUILD] ✓ story {len(stories)}/8: {article['headline'][:50]}")
+        stories.append(
+            {
+                "id": article["id"],
+                "headline": article["headline"],
+                "body": article["body"],
+                "source": article["source"],
+                "published_at": article["published_at"],
+                "lat": loc["lat"],
+                "lng": loc["lng"],
+                "sw_lat": loc["sw_lat"],
+                "sw_lng": loc["sw_lng"],
+                "ne_lat": loc["ne_lat"],
+                "ne_lng": loc["ne_lng"],
+                "city": loc.get("city"),
+                "country": loc["country"],
+                "confidence": loc["confidence"],
+            }
+        )
         if len(stories) >= 8:
             break
 
     from services.cache import get_daily_call_count
+
     calls_today = get_daily_call_count()
     source = f"fresh (newsapi + bedrock, {calls_today} calls today)"
-    print(f"[BUILD] {len(stories)} stories passed extraction")
 
     if stories:
         write_cache("stories", stories)
     return stories, source
 
 
+# Looks up a single story by ID for direct clues routing
 def get_story_by_id(story_id: str):
     """Look up a single story by ID. Used by clues router directly."""
     stories, _ = build_stories()
@@ -65,6 +66,7 @@ def get_story_by_id(story_id: str):
     return story
 
 
+# Returns the list of available stories for today
 @router.get("/stories")
 def get_stories():
     stories, source = build_stories()
@@ -73,6 +75,7 @@ def get_stories():
     return {"stories": stories, "source": source, "count": len(stories)}
 
 
+# Retrieves a specific story by its ID
 @router.get("/stories/{story_id}")
 def get_story(story_id: str):
     stories, source = build_stories()

@@ -5,6 +5,7 @@ import Game from './screens/Game';
 import Result from './screens/Result';
 import Final from './screens/Final';
 import { useGame } from './hooks/useGame';
+import { usePlayerStats } from './hooks/usePlayerStats';
 
 class ErrorBoundary extends Component {
     constructor(props) {
@@ -52,6 +53,7 @@ class ErrorBoundary extends Component {
 
 function AppInner() {
     const game = useGame();
+    const { stats: playerStats, global: globalStats } = usePlayerStats();
     const showGame = game.screen === 'game' || game.screen === 'result';
 
     return (
@@ -99,6 +101,7 @@ function AppInner() {
                     scores={game.scores}
                     roundResults={game.roundResults}
                     onPlayAgain={() => window.location.reload()}
+                    playerStats={playerStats ? { ...playerStats, global: globalStats } : null}
                 />
             )}
         </>

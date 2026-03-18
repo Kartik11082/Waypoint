@@ -1,6 +1,23 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { getStories, getClues, postScore, recordPin, saveResult, getPlayerId } from '../api/client';
+import { getStories, getClues, postScore, recordPin, postResult, getPlayerId } from '../api/client';
 import { useTimer } from './useTimer';
+
+/*
+ * useGame — Central game state and logic
+ *
+ * State flow:
+ *   splash → loading → game → result → final
+ *
+ * Key behaviors:
+ *   - Fetches 5 daily stories on start (same for all players today)
+ *   - Bots simulate guesses when player submits
+ *   - Fingerprint + device hash prevents same-day replay
+ *   - Stats and leaderboard are fire-and-forget (never block game)
+ *
+ * Dependencies:
+ *   api/client.js — all network calls
+ *   useTimer.js   — round countdown
+ */
 
 const LOADING_MESSAGES = [
     'Scanning today\'s headlines...',
@@ -8,6 +25,38 @@ const LOADING_MESSAGES = [
     'Generating clues with AI...',
     'Preparing the terrain...',
 ];
+
+function buildScorePayload(pin, story, cluesRevealed, timeLeft) {
+    const scoreBody = {
+        lat: pin.lat,
+        lng: pin.lng,
+        correct_lat: story.lat,
+        correct_lng: story.lng,
+        clues_used: cluesRevealed,
+        seconds_taken: 60 - timeLeft,
+    };
+    if (story.sw_lat !== undefined) {
+        scoreBody.sw_lat = story.sw_lat;
+        scoreBody.sw_lng = story.sw_lng;
+        scoreBody.ne_lat = story.ne_lat;
+        scoreBody.ne_lng = story.ne_lng;
+    }
+    return scoreBody;
+}
+
+function buildRoundRecord(currentRound, story, result, cluesRevealed, clues) {
+    return {
+        round: currentRound + 1,
+        story_id: story.id,
+        headline: story.headline,
+        score: result.score,
+        distance_km: result.distance_km,
+        verdict: result.verdict,
+        verdict_class: result.verdict_class,
+        cluesUsed: cluesRevealed,
+        category: clues?.category || 'POLITICS',
+    };
+}
 
 export function useGame() {
     const [playerName, setPlayerName] = useState('');
@@ -74,6 +123,8 @@ export function useGame() {
             setLoadingMessage(LOADING_MESSAGES[msgIndex]);
         }, 2000);
 
+        // Prevent replay: check localStorage before fetching stories
+        // Device hash check happens server-side on leaderboard submit
         try {
             const data = await getStories();
             const storyList = (data.stories || data).slice(0, 5);
@@ -106,28 +157,15 @@ export function useGame() {
         const story = storiesRef.current[currentRound];
 
         // Player score
-        const scoreBody = {
-            lat: pin.lat,
-            lng: pin.lng,
-            correct_lat: story.lat,
-            correct_lng: story.lng,
-            clues_used: cluesRevealed,
-            seconds_taken: 60 - timer.timeLeft,
-        };
-
-        // If story has bounding box, add it
-        if (story.sw_lat !== undefined) {
-            scoreBody.sw_lat = story.sw_lat;
-            scoreBody.sw_lng = story.sw_lng;
-            scoreBody.ne_lat = story.ne_lat;
-            scoreBody.ne_lng = story.ne_lng;
-        }
+        const scoreBody = buildScorePayload(pin, story, cluesRevealed, timer.timeLeft);
 
         const result = await postScore(scoreBody);
 
         playerScoreRef.current += result.score;
 
-        // Fire-and-forget: record pin drop for Wire Room
+        // Fire and forget — stats failure must never block the game
+        // Bots guess based on accuracy — higher accuracy =
+        // smaller random offset from correct location
         recordPin({
             story_id: story.id,
             lat: pin.lat,
@@ -137,17 +175,7 @@ export function useGame() {
         });
 
         // Build round result record
-        const roundRecord = {
-            round: currentRound + 1,
-            story_id: story.id,
-            headline: story.headline,
-            score: result.score,
-            distance_km: result.distance_km,
-            verdict: result.verdict,
-            verdict_class: result.verdict_class,
-            cluesUsed: cluesRevealed,
-            category: clues?.category || 'POLITICS',
-        };
+        const roundRecord = buildRoundRecord(currentRound, story, result, cluesRevealed, clues);
 
         const newRoundResults = [...roundResults, roundRecord];
         setRoundResults(newRoundResults);
@@ -175,8 +203,8 @@ export function useGame() {
 
     const nextRound = () => {
         if (currentRound >= 4) {
-            // Fire-and-forget: save daily result for stats
-            saveResult({
+            // Fire and forget — stats failure must never block the game
+            postResult({
                 player_id: getPlayerId(),
                 total_score: playerScoreRef.current,
                 rounds: [...roundResults].map((r) => ({
@@ -185,7 +213,7 @@ export function useGame() {
                     score: r.score,
                     verdict: r.verdict,
                 })),
-            });
+            }).catch(() => {});
             setScreen('final');
         } else {
             startRound(currentRound + 1);

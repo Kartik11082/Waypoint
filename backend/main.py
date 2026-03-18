@@ -1,5 +1,6 @@
-# Waypoint — Backend entry point
-# Single FastAPI app on :8000 consolidating score, stories, and clues.
+# ── main.py ──
+# Role: Entry point, middleware, and router registration for the FastAPI app.
+# Depends on: dotenv, fastapi, routers.*, database
 import os
 import time
 from collections import defaultdict
@@ -16,11 +17,12 @@ from routers import clues, score, stories, stats, wireroom
 
 # ── Rate limiting state ─────────────────────────────────
 _rate_limit_store: dict[str, list[float]] = defaultdict(list)
-RATE_LIMIT = 30
+RATE_LIMIT = 200
 RATE_WINDOW = 60
 
 
 # ── Lifespan ────────────────────────────────────────────
+# Initializes database schema before accepting traffic
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     from database import init_db
@@ -51,17 +53,8 @@ app.add_middleware(
 )
 
 
-# ── Request logging middleware ──────────────────────────
-@app.middleware("http")
-async def log_requests(request: Request, call_next):
-    start = time.time()
-    response = await call_next(request)
-    ms = round((time.time() - start) * 1000)
-    print(f"[{request.method}] {request.url.path} -> {response.status_code} ({ms}ms)")
-    return response
-
-
 # ── Rate limiting middleware ────────────────────────────
+# Slides a 60-second window to limit requests per IP
 @app.middleware("http")
 async def rate_limit(request: Request, call_next):
     if request.url.path == "/health":
@@ -91,6 +84,7 @@ app.include_router(stats.router, prefix="/api")
 
 
 # ── Health check ────────────────────────────────────────
+# Health check to verify the service is running
 @app.get("/health")
 def health():
     return {"status": "ok", "version": "1.0.0"}

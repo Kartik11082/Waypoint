@@ -237,3 +237,177 @@ input::placeholder {
 ::-webkit-scrollbar-thumb {
   background: var(--border);
 }
+
+/* ── Returning Player ───────────────────────────────── */
+.returning-player {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s2);
+  margin-bottom: var(--s3);
+}
+
+.streak-badge {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  padding: var(--s1) var(--s3);
+  text-transform: uppercase;
+}
+
+.returning-label {
+  font-family: var(--font-ui);
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.returning-sub {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.05em;
+}
+
+.played-today {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  color: var(--green);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* ── Category Performance ───────────────────────────── */
+.category-performance {
+  width: 100%;
+  margin-bottom: var(--s6);
+}
+
+.category-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  margin-top: var(--s3);
+}
+
+.category-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  font-family: var(--font-ui);
+  font-size: 10px;
+}
+
+.cat-name {
+  width: 80px;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  flex-shrink: 0;
+}
+
+.cat-bar-track {
+  flex: 1;
+  height: 2px;
+  background: var(--border);
+}
+
+.cat-bar-fill {
+  height: 100%;
+  transition: width 0.8s ease;
+}
+
+.cat-score {
+  width: 48px;
+  text-align: right;
+  color: var(--primary);
+}
+
+.cat-games {
+  width: 28px;
+  text-align: right;
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.category-insight {
+  margin-top: var(--s3);
+  font-family: var(--font-ui);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.insight-strong { color: var(--green); }
+.insight-weak   { color: var(--accent); }
+
+/* ── Global Compare ─────────────────────────────────── */
+.global-compare {
+  width: 100%;
+  margin-bottom: var(--s6);
+  padding-top: var(--s5);
+  border-top: 1px solid var(--border);
+}
+
+.global-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s3);
+  margin-top: var(--s3);
+}
+
+.global-rank {
+  font-family: var(--font-display);
+  font-size: 48px;
+  color: var(--primary);
+  line-height: 1;
+}
+
+.global-of {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.05em;
+}
+
+.global-avg {
+  font-family: var(--font-ui);
+  font-size: 9px;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-top: var(--s2);
+}
+
+.wire-stats {
+  display: flex;
+  gap: var(--s5);
+  padding: var(--s3) 0;
+  font-family: var(--font-ui);
+  font-size: 9px;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border-top: 1px solid var(--border);
+  margin-top: var(--s4);
+}
+
+/* ── Leaderboard Verified ───────────────────────────────── */
+.lb-row.lb-verified .lb-rank::after {
+  content: '·';
+  color: var(--green);
+  margin-left: 2px;
+}
+
+.lb-legend {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  margin-top: var(--s3);
+  font-family: var(--font-ui);
+  font-size: 9px;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+}

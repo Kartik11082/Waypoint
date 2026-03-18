@@ -1,28 +1,55 @@
-# Waypoint — SQLite database layer
-# Handles Wire Room (pin drops) and Player Stats (daily results, categories).
-# Uses Python's built-in sqlite3 only. No ORM.
+# ── database.py ──
+# Role: SQLite schema definitions and all query functions.
+# Depends on: sqlite3, contextlib, pathlib
 import sqlite3
 from contextlib import contextmanager
-from datetime import date
 from pathlib import Path
 
 DATABASE_PATH = Path("./waypoint.db")
 
 
+# ── Device Hash Helpers ─────────────────────────────────
+
+# Returns a stable 16-character identifier based on client IP and user agent
+def compute_device_hash(ip: str, user_agent: str, fingerprint: str) -> str:
+    import hashlib
+    
+    # Normalize IP — strip port if present
+    clean_ip = ip.split(':')[0] if ':' in ip else ip
+    
+    # Combine: fingerprint is primary signal
+    # IP is secondary (helps if fingerprint spoofed)
+    if fingerprint:
+        raw = f"{fingerprint}|{clean_ip}"
+    else:
+        raw = f"{clean_ip}|{user_agent}"
+    
+    return hashlib.sha256(raw.encode()).hexdigest()[:16]
+
+
+# Pulls client info from request headers to compute device hash
+def extract_device_hash(request) -> str:
+    forwarded = request.headers.get('x-forwarded-for', '')
+    ip = forwarded.split(',')[0].strip() if forwarded else request.client.host
+    fingerprint = request.headers.get('x-device-fingerprint', '')
+    user_agent = request.headers.get('user-agent', '')
+    return compute_device_hash(ip, user_agent, fingerprint)
+
+
 # ── Connection helpers ──────────────────────────────────
 
 
+# Returns a new sqlite3 connection with WAL mode and dict-like rows
 def get_connection():
-    """Return a new sqlite3 connection with WAL mode and dict-like rows."""
     conn = sqlite3.connect(str(DATABASE_PATH))
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     return conn
 
 
+# Context manager for safe DB transactions
 @contextmanager
 def db_connection():
-    """Context manager for safe DB transactions."""
     conn = get_connection()
     try:
         yield conn
@@ -37,8 +64,8 @@ def db_connection():
 # ── Schema ──────────────────────────────────────────────
 
 
+# Creates all tables and indexes if they don't exist
 def init_db():
-    """Create all tables and indexes if they don't exist."""
     with db_connection() as conn:
         conn.executescript("""
             CREATE TABLE IF NOT EXISTS pin_drops (
@@ -62,6 +89,7 @@ def init_db():
                 total_score  INTEGER NOT NULL,
                 rank         INTEGER,
                 rounds       TEXT NOT NULL,
+                has_fingerprint INTEGER DEFAULT 0,
                 created_at   TEXT DEFAULT (datetime('now')),
                 UNIQUE(player_id, date)
             );
@@ -81,15 +109,12 @@ def init_db():
     print("[DB] Tables created / verified")
 
 
-def today_key():
-    return date.today().isoformat()
-
 
 # ── Wire Room functions ─────────────────────────────────
 
 
+# Records an anonymous pin drop, silently ignoring errors
 def record_pin_drop(story_id, date_str, lat, lng, clues_used, score):
-    """Record an anonymous pin drop. Silently ignores errors."""
     try:
         with db_connection() as conn:
             conn.execute(
@@ -101,8 +126,8 @@ def record_pin_drop(story_id, date_str, lat, lng, clues_used, score):
         return None
 
 
+# Gets up to 500 pin drops for a story on a given date
 def get_pin_cloud(story_id, date_str):
-    """Get up to 500 pin drops for a story on a given date."""
     with db_connection() as conn:
         rows = conn.execute(
             "SELECT lat, lng, clues_used, score FROM pin_drops WHERE story_id = ? AND date = ? ORDER BY created_at DESC LIMIT 500",
@@ -111,8 +136,8 @@ def get_pin_cloud(story_id, date_str):
     return [dict(r) for r in rows]
 
 
+# Gets aggregate stats (average score, total players) for a story
 def get_pin_stats(story_id, date_str):
-    """Get aggregate stats for a story on a given date."""
     with db_connection() as conn:
         row = conn.execute(
             "SELECT COUNT(*) as total, AVG(score) as avg_score FROM pin_drops WHERE story_id = ? AND date = ?",
@@ -129,7 +154,6 @@ def get_pin_stats(story_id, date_str):
     return {
         "total_players": row["total"] if row else 0,
         "avg_score": round(row["avg_score"], 1) if row and row["avg_score"] else 0,
-        "avg_distance": None,
         "clue_distribution": clue_dist,
     }
 
@@ -137,20 +161,20 @@ def get_pin_stats(story_id, date_str):
 # ── Player stats functions ──────────────────────────────
 
 
-def save_daily_result(player_id, date_str, total_score, rounds_json):
-    """Save a player's daily result. Ignores duplicates (one per day)."""
+# Saves a player's daily result, ignoring duplicates
+def save_daily_result(player_id, date_str, total_score, rounds_json, has_fingerprint=0):
     try:
         with db_connection() as conn:
             conn.execute(
-                "INSERT OR IGNORE INTO daily_results (player_id, date, total_score, rounds) VALUES (?, ?, ?, ?)",
-                (player_id, date_str, total_score, rounds_json),
+                "INSERT OR IGNORE INTO daily_results (player_id, date, total_score, rounds, has_fingerprint) VALUES (?, ?, ?, ?, ?)",
+                (player_id, date_str, total_score, rounds_json, has_fingerprint),
             )
     except Exception as e:
         print(f"[DB] Error saving daily result: {e}")
 
 
+# Gets last 30 days of results for a player
 def get_player_history(player_id):
-    """Get last 30 days of results for a player."""
     with db_connection() as conn:
         rows = conn.execute(
             "SELECT date, total_score, rank, rounds FROM daily_results WHERE player_id = ? ORDER BY date DESC LIMIT 30",
@@ -159,8 +183,8 @@ def get_player_history(player_id):
     return [dict(r) for r in rows]
 
 
+# Updates or creates a category stat row for a player
 def upsert_category_stat(player_id, category, score):
-    """Update or create a category stat row for a player."""
     try:
         with db_connection() as conn:
             existing = conn.execute(
@@ -186,8 +210,8 @@ def upsert_category_stat(player_id, category, score):
         print(f"[DB] Error upserting category stat: {e}")
 
 
+# Gets all category stats for a player, sorted by average score
 def get_category_stats(player_id):
-    """Get all category stats for a player, sorted by avg_score."""
     with db_connection() as conn:
         rows = conn.execute(
             "SELECT category, games_played, total_score, avg_score, best_score FROM category_stats WHERE player_id = ? ORDER BY avg_score DESC",
@@ -196,8 +220,8 @@ def get_category_stats(player_id):
     return [dict(r) for r in rows]
 
 
+# Gets today's global leaderboard and stats
 def get_global_stats(date_str):
-    """Get today's global leaderboard and stats."""
     with db_connection() as conn:
         count_row = conn.execute(
             "SELECT COUNT(DISTINCT player_id) as total, AVG(total_score) as avg FROM daily_results WHERE date = ?",
@@ -205,12 +229,16 @@ def get_global_stats(date_str):
         ).fetchone()
 
         top_rows = conn.execute(
-            "SELECT player_id, total_score FROM daily_results WHERE date = ? ORDER BY total_score DESC LIMIT 10",
+            "SELECT player_id, total_score, has_fingerprint FROM daily_results WHERE date = ? ORDER BY total_score DESC LIMIT 10",
             (date_str,),
         ).fetchall()
 
     top_scores = [
-        {"player_id": r["player_id"][:4] + "****", "total_score": r["total_score"]}
+        {
+            "player_id_prefix": r["player_id"][:4], 
+            "score": r["total_score"],
+            "verified": bool(r["has_fingerprint"])
+        }
         for r in top_rows
     ]
 

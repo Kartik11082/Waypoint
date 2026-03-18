@@ -1,6 +1,6 @@
-# Waypoint — Switchable AI provider (Bedrock or OpenRouter)
-# Set AI_PROVIDER=bedrock or AI_PROVIDER=openrouter in .env
-# Both providers expose the same call_llm(prompt, system, max_tokens) interface.
+# ── llm.py ──
+# Role: Switchable AI provider (Bedrock or OpenRouter) exposing call_llm().
+# Depends on: json, os, httpx, boto3
 import json
 import os
 
@@ -9,8 +9,8 @@ import httpx
 _bedrock_client = None
 
 
+# Returns the configured AI provider name
 def get_provider():
-    """Return the configured AI provider name."""
     return os.getenv("AI_PROVIDER", "bedrock").lower()
 
 
@@ -77,12 +77,8 @@ def _call_openrouter(prompt, system, max_tokens):
 # ── Unified interface ───────────────────────────────────
 
 
+# Sends a prompt to the configured AI provider and returns raw text
 def call_llm(prompt, system, max_tokens=200):
-    """Send a prompt to the configured AI provider and return raw text.
-
-    Supports: bedrock, openrouter
-    Set AI_PROVIDER in .env to switch.
-    """
     provider = get_provider()
 
     if provider == "openrouter":

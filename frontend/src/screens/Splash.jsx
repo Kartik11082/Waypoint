@@ -1,8 +1,74 @@
 import { useState, useRef, useEffect } from 'react';
+import { usePlayerStats } from '../hooks/usePlayerStats';
+
+function ReturningPlayerSection({ hasPlayed, stats, playedToday, stagger }) {
+    if (!hasPlayed) return null;
+    return (
+        <div className="returning-player animate-fadeUp" style={stagger(180)}>
+            {stats.streak > 1 && (
+                <div className="streak-badge">
+                    🔥 {stats.streak}-DAY STREAK
+                </div>
+            )}
+            <div className="returning-label">
+                WELCOME BACK — {stats.total_games} GAMES PLAYED
+            </div>
+            {playedToday ? (
+                <div className="played-today">
+                    ✓ YOU'VE PLAYED TODAY · {stats.today_score.toLocaleString()} PTS
+                </div>
+            ) : (
+                <div className="returning-sub">
+                    BEST: {stats.best_score.toLocaleString()} PTS
+                    {stats.categories.length > 0 && (
+                        <> · STRONGEST: {stats.categories[0].name}</>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
+
+function NameInputSection({ stagger, inputRef, name, setName, handleKeyDown, canStart, handleSubmit, playedToday }) {
+    return (
+        <div
+            className="animate-fadeUp"
+            style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 'var(--s4)',
+                width: '280px',
+                ...stagger(280),
+            }}
+        >
+            <span className="label">YOUR CORRESPONDENT NAME</span>
+            <input
+                ref={inputRef}
+                type="text"
+                placeholder="John Doe"
+                maxLength={20}
+                autoComplete="off"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                onKeyDown={handleKeyDown}
+                style={{ textAlign: 'center' }}
+            />
+            <button
+                className="btn-primary"
+                disabled={!canStart}
+                onClick={handleSubmit}
+            >
+                {playedToday ? "SEE TODAY'S RESULTS" : 'ENTER THE FIELD'}
+            </button>
+        </div>
+    );
+}
 
 export default function Splash({ onStart }) {
     const [name, setName] = useState('');
     const inputRef = useRef(null);
+    const { stats, loading } = usePlayerStats();
 
     useEffect(() => {
         inputRef.current?.focus();
@@ -21,6 +87,9 @@ export default function Splash({ onStart }) {
     const stagger = (delay) => ({
         animationDelay: `${delay}ms`,
     });
+
+    const hasPlayed = stats && stats.total_games > 0;
+    const playedToday = stats?.today_score != null;
 
     return (
         <div className="screen" style={{ gap: 'var(--s5)' }}>
@@ -65,6 +134,9 @@ export default function Splash({ onStart }) {
                 Can you place the story?
             </p>
 
+            {/* Returning player section */}
+            <ReturningPlayerSection hasPlayed={hasPlayed} stats={stats} playedToday={playedToday} stagger={stagger} />
+
             <div
                 className="animate-fadeUp"
                 style={{
@@ -75,37 +147,16 @@ export default function Splash({ onStart }) {
                 }}
             />
 
-            <div
-                className="animate-fadeUp"
-                style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 'var(--s4)',
-                    width: '280px',
-                    ...stagger(280),
-                }}
-            >
-                <span className="label">YOUR CORRESPONDENT NAME</span>
-                <input
-                    ref={inputRef}
-                    type="text"
-                    placeholder="e.g. John Doe"
-                    maxLength={20}
-                    autoComplete="off"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    style={{ textAlign: 'center' }}
-                />
-                <button
-                    className="btn-primary"
-                    disabled={!canStart}
-                    onClick={handleSubmit}
-                >
-                    ENTER THE FIELD
-                </button>
-            </div>
+            <NameInputSection 
+                stagger={stagger} 
+                inputRef={inputRef} 
+                name={name} 
+                setName={setName} 
+                handleKeyDown={handleKeyDown} 
+                canStart={canStart} 
+                handleSubmit={handleSubmit} 
+                playedToday={playedToday} 
+            />
 
             <p
                 className="animate-fadeUp"

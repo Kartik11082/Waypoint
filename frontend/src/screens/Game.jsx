@@ -82,11 +82,11 @@ function PinStatus({ pin }) {
 
 export default function Game({
     story,
-    clues,
-    cluesRevealed,
-    onRevealClue,
+    clues, // consider moving to context if this grows
+    cluesRevealed, // consider moving to context if this grows
+    onRevealClue, // consider moving to context if this grows
     pin,
-    onPinPlace,
+    onPinPlace, // consider moving to context if this grows
     onSubmit,
     timeLeft,
     roundNumber,

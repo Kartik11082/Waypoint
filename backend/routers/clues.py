@@ -1,5 +1,6 @@
-# Waypoint — Clues router
-# GET /clues/{story_id}: generates 3 progressive geography clues for a story.
+# ── clues.py ──
+# Role: Generates 3 progressive geography clues for a story.
+# Depends on: json, fastapi, routers.stories, services.llm, services.cache
 import json
 
 from fastapi import APIRouter, HTTPException
@@ -29,6 +30,7 @@ Body: {body}
 Country: {country}"""
 
 
+# Generates clues for a story using the configured AI provider
 def generate_clues(story):
     """Generate clues for a story using the configured AI provider."""
     prompt = CLUE_PROMPT.format(
@@ -52,7 +54,6 @@ def generate_clues(story):
         # Reject if clue1 leaks the country name
         country = story.get("country", "").lower()
         if country and country in clues["clue1"].lower():
-            print(f"[CLUE] clue1 leaked country '{country}', rejecting")
             return None
 
         # Normalize category and difficulty
@@ -62,19 +63,18 @@ def generate_clues(story):
         if clues.get("difficulty") not in ("easy", "medium", "hard"):
             clues["difficulty"] = "medium"
 
-        print(f"[CLUE] Generated: cat={clues['category']} diff={clues['difficulty']}")
         return clues
     except Exception as e:
         print(f"[CLUE] ERROR: {e}")
         return None
 
 
+# Returns cached clues for a story or generates new ones
 @router.get("/clues/{story_id}")
 def clues_endpoint(story_id: str):
     # Check cache first
     cached = read_item_cache("clues", story_id)
     if cached:
-        print(f"[CLUE] Cache hit for story {story_id}")
         return cached
 
     # Get story directly (no HTTP call — same process)

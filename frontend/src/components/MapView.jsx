@@ -26,28 +26,8 @@ const correctIcon = L.divIcon({
     iconAnchor: [12, 12],
 });
 
-export default function MapView({
-    onPinPlace,
-    pin,
-    correctPin = null,
-    correctBounds = null,
-    opponentPins = [],
-    interactive = true,
-}) {
-    const containerRef = useRef(null);
+function useInitMap(containerRef, interactiveRef, onPinPlaceRef) {
     const mapRef = useRef(null);
-    const playerMarkerRef = useRef(null);
-    const correctMarkerRef = useRef(null);
-    const correctRectRef = useRef(null);
-    const lineRef = useRef(null);
-    const opponentMarkersRef = useRef([]);
-    const onPinPlaceRef = useRef(onPinPlace);
-    const interactiveRef = useRef(interactive);
-
-    useEffect(() => { onPinPlaceRef.current = onPinPlace; }, [onPinPlace]);
-    useEffect(() => { interactiveRef.current = interactive; }, [interactive]);
-
-    // Init map
     useEffect(() => {
         if (!containerRef.current || mapRef.current) return;
 
@@ -69,8 +49,11 @@ export default function MapView({
         mapRef.current = map;
         return () => { map.remove(); mapRef.current = null; };
     }, []);
+    return mapRef;
+}
 
-    // Player pin (draggable)
+function usePlayerMarker(mapRef, pin, interactiveRef, onPinPlaceRef) {
+    const playerMarkerRef = useRef(null);
     useEffect(() => {
         const map = mapRef.current;
         if (!map) return;
@@ -94,8 +77,12 @@ export default function MapView({
             playerMarkerRef.current = marker;
         }
     }, [pin]);
+}
 
-    // Correct pin + line
+function useCorrectMarker(mapRef, correctPin, correctBounds, pin) {
+    const correctMarkerRef = useRef(null);
+    const correctRectRef = useRef(null);
+    const lineRef = useRef(null);
     useEffect(() => {
         const map = mapRef.current;
         if (!map) return;
@@ -114,7 +101,6 @@ export default function MapView({
         }
 
         if (correctPin) {
-            // Draw bounding box rectangle if available
             if (correctBounds) {
                 const bounds = [
                     [correctBounds.sw_lat, correctBounds.sw_lng],
@@ -130,7 +116,6 @@ export default function MapView({
                 }).addTo(map);
             }
 
-            // Center point marker
             correctMarkerRef.current = L.marker([correctPin.lat, correctPin.lng], {
                 icon: correctIcon,
                 interactive: false,
@@ -142,7 +127,6 @@ export default function MapView({
                     { color: '#e05c2a', weight: 1.5, dashArray: '4 6', opacity: 0.5 }
                 ).addTo(map);
 
-                // Fit map to player pin + full bounding box (or just both pins)
                 if (correctBounds) {
                     const allBounds = L.latLngBounds([
                         [correctBounds.sw_lat, correctBounds.sw_lng],
@@ -159,8 +143,10 @@ export default function MapView({
             }
         }
     }, [correctPin, correctBounds]);
+}
 
-    // Opponent pins
+function useOpponentMarkers(mapRef, opponentPins) {
+    const opponentMarkersRef = useRef([]);
     useEffect(() => {
         const map = mapRef.current;
         if (!map) return;
@@ -181,6 +167,53 @@ export default function MapView({
             opponentMarkersRef.current.push(marker);
         });
     }, [opponentPins]);
+}
+
+function useWireMarkerLayer(mapRef, wirePins) {
+    const wirePinsRef = useRef([]);
+    useEffect(() => {
+        const map = mapRef.current;
+        if (!map) return;
+
+        wirePinsRef.current.forEach((m) => map.removeLayer(m));
+        wirePinsRef.current = [];
+
+        if (!wirePins || wirePins.length === 0) return;
+
+        wirePins.forEach((wp) => {
+            const m = L.circleMarker([wp.lat, wp.lng], {
+                radius: 4,
+                fillColor: '#6b6b60',
+                fillOpacity: 0.35,
+                color: 'transparent',
+                weight: 0,
+            }).addTo(map);
+            wirePinsRef.current.push(m);
+        });
+    }, [wirePins]);
+}
+
+export default function MapView({
+    onPinPlace,
+    pin,
+    correctPin = null,
+    correctBounds = null,
+    wirePins = [],
+    opponentPins = [],
+    interactive = true,
+}) {
+    const containerRef = useRef(null);
+    const onPinPlaceRef = useRef(onPinPlace);
+    const interactiveRef = useRef(interactive);
+
+    useEffect(() => { onPinPlaceRef.current = onPinPlace; }, [onPinPlace]);
+    useEffect(() => { interactiveRef.current = interactive; }, [interactive]);
+
+    const mapRef = useInitMap(containerRef, interactiveRef, onPinPlaceRef);
+    usePlayerMarker(mapRef, pin, interactiveRef, onPinPlaceRef);
+    useCorrectMarker(mapRef, correctPin, correctBounds, pin);
+    useOpponentMarkers(mapRef, opponentPins);
+    useWireMarkerLayer(mapRef, wirePins);
 
     return <div ref={containerRef} style={{ width: '100%', height: '100%' }} />;
 }

@@ -1,37 +1,46 @@
-export async function getStories() {
-    const res = await fetch('/api/stories');
-    return res.json();
+import { getFingerprint, getCachedFingerprint } from '../utils/clientMetrics';
+
+export async function initClient() {
+    await getFingerprint();
 }
 
-export async function getClues(id) {
-    const res = await fetch(`/api/clues/${id}`);
-    return res.json();
+async function apiFetch(path, options = {}) {
+    const headers = {
+        'Content-Type': 'application/json',
+        'X-Device-Fingerprint': getCachedFingerprint(),
+        ...options.headers,
+    };
+
+    const response = await fetch(path, { ...options, headers });
+
+    if (!response.ok && response.status !== 404) {
+        throw new Error(`API error: ${response.status}`);
+    }
+
+    return response.json();
 }
 
-export async function postScore(body) {
-    const res = await fetch('/api/score', {
+export const getStories = () => apiFetch('/api/stories');
+
+export const getClues = (id) => apiFetch(`/api/clues/${id}`);
+
+export const postScore = (body) =>
+    apiFetch('/api/score', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        body: JSON.stringify(body)
     });
-    return res.json();
-}
 
 // ── Wire Room ──────────────────────────────────────────
 
 export function recordPin(body) {
     // Fire and forget — never block the game
-    fetch('/api/wireroom/pin', {
+    apiFetch('/api/wireroom/pin', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
     }).catch(() => {});
 }
 
-export async function getPinCloud(storyId) {
-    const res = await fetch(`/api/wireroom/pins/${storyId}`);
-    return res.json();
-}
+export const getPinCloud = (storyId) => apiFetch(`/api/wireroom/pins/${storyId}`);
 
 // ── Player Stats ───────────────────────────────────────
 
@@ -44,21 +53,14 @@ export function getPlayerId() {
     return id;
 }
 
-export function saveResult(body) {
-    // Fire and forget — never block the game
-    fetch('/api/stats/result', {
+export const getPlayerStats = (playerId) => apiFetch(`/api/stats/player/${playerId}`);
+
+export const getGlobalStats = () => apiFetch('/api/stats/global');
+
+export const postResult = (body) =>
+    apiFetch('/api/stats/result', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-    }).catch(() => {});
-}
+        body: JSON.stringify(body)
+    });
 
-export async function getPlayerStats(playerId) {
-    const res = await fetch(`/api/stats/player/${playerId}`);
-    return res.json();
-}
 
-export async function getGlobalStats() {
-    const res = await fetch('/api/stats/global');
-    return res.json();
-}

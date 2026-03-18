@@ -44,6 +44,7 @@ export default function Leaderboard({ scores }) {
                     return (
                         <div
                             key={entry.name + i}
+                            className={`lb-row ${highlight ? 'lb-you' : ''} ${entry.verified ? 'lb-verified' : ''}`}
                             style={{
                                 display: 'flex',
                                 alignItems: 'center',
@@ -52,7 +53,7 @@ export default function Leaderboard({ scores }) {
                                 fontSize: '11px',
                             }}
                         >
-                            <span style={{ width: '16px', color: 'var(--muted)', flexShrink: 0 }}>
+                            <span className="lb-rank" style={{ width: '16px', color: 'var(--muted)', flexShrink: 0 }}>
                                 {i + 1}
                             </span>
                             <span
@@ -90,6 +91,13 @@ export default function Leaderboard({ scores }) {
                     );
                 })}
             </div>
+            
+            {scores.some((s) => s.verified) && (
+                <div className="lb-legend">
+                    <span style={{ color: 'var(--green)' }}>·</span>
+                    <span className="lb-legend-text">VERIFIED DEVICE</span>
+                </div>
+            )}
         </div>
     );
 }
