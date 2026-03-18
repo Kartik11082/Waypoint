@@ -1,13 +1,13 @@
-import { getFingerprint, getCachedFingerprint } from '../utils/clientMetrics';
+import { getClientMetrics, getCachedMetrics } from '../utils/clientMetrics';
 
 export async function initClient() {
-    await getFingerprint();
+    await getClientMetrics();
 }
 
 async function apiFetch(path, options = {}) {
     const headers = {
         'Content-Type': 'application/json',
-        'X-Device-Fingerprint': getCachedFingerprint(),
+        'X-Device-Fingerprint': getCachedMetrics(),
         ...options.headers,
     };
 

@@ -8,7 +8,7 @@ async function collectSignals() {
             ctx.fillText('waypoint-fp-2024', 10, 20);
             ctx.fillStyle = 'rgba(120,50,220,0.5)';
             ctx.fillRect(10, 10, 50, 30);
-            
+
             // Convert to blob and then to data URL
             const blob = await canvas.convertToBlob();
             canvasData = await new Promise((resolve) => {
