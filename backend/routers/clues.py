@@ -12,8 +12,16 @@ from services.cache import read_item_cache, write_item_cache
 router = APIRouter()
 
 VALID_CATEGORIES = {
-    "FINANCE", "CLIMATE", "POLITICS", "TECH", "CONFLICT",
-    "HEALTH", "ENERGY", "DIPLOMACY", "TRADE", "URBAN",
+    "FINANCE",
+    "CLIMATE",
+    "POLITICS",
+    "TECH",
+    "CONFLICT",
+    "HEALTH",
+    "ENERGY",
+    "DIPLOMACY",
+    "TRADE",
+    "URBAN",
 }
 
 CLUE_PROMPT = """Create 3 clues for a geography guessing game. Players must guess where this news story took place.
@@ -27,7 +35,9 @@ Difficulty: easy=capital of major country, medium=major city or smaller country,
 
 Headline: {headline}
 Body: {body}
-Country: {country}"""
+Country: {country}
+Your entire response must be a single valid JSON object with no text before or after it. No markdown. No explanation.
+"""
 
 
 # Generates clues for a story using the configured AI provider
@@ -45,7 +55,12 @@ def generate_clues(story):
             system="You are a game designer creating geography clues. Return only valid JSON, no markdown, no explanation.",
             max_tokens=400,
         )
-        clues = json.loads(raw_text)
+        # LLM sometimes returns trailing text or preamble — extract only the first {...} block
+        start = raw_text.find("{")
+        end = raw_text.rfind("}")
+        if start == -1 or end == -1:
+            return None
+        clues = json.loads(raw_text[start : end + 1])
 
         # Validate required fields
         if not all(clues.get(k) for k in ("clue1", "clue2", "clue3")):
@@ -53,7 +68,8 @@ def generate_clues(story):
 
         # Reject if clue1 leaks the country name
         country = story.get("country", "").lower()
-        if country and country in clues["clue1"].lower():
+        clue1 = clues.get("clue1") or ""
+        if country and country in clue1.lower():
             return None
 
         # Normalize category and difficulty

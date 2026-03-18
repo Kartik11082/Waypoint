@@ -14,8 +14,16 @@ from services.cache import (
 DAILY_LLM_LIMIT = 60
 
 SKIP_KEYWORDS = [
-    "roundup", "opinion", "analysis", "weekly", "markets wrap",
-    "your questions", "newsletter", "obituary", "review", "podcast",
+    "roundup",
+    "opinion",
+    "analysis",
+    "weekly",
+    "markets wrap",
+    "your questions",
+    "newsletter",
+    "obituary",
+    "review",
+    "podcast",
 ]
 
 LOCATION_PROMPT = """Extract the actual location where the event in the news article occurred. Ignore publisher or source locations (e.g., "The Washington Post").
@@ -42,7 +50,9 @@ Rules:
 - Confidence reflects how clearly the location is stated in the article.
 
 Headline: {headline}
-Body: {body}"""
+Body: {body}
+Your entire response must be a single valid JSON object with no text before or after it. No markdown. No explanation.
+"""
 
 
 # Checks if an article is likely to contain a geocodable location
@@ -76,7 +86,12 @@ def extract_location(article):
             max_tokens=200,
         )
         increment_call_count()
-        loc = json.loads(raw_text)
+        # LLM sometimes returns trailing text or preamble — extract only the first {...} block
+        start = raw_text.find("{")
+        end = raw_text.rfind("}")
+        if start == -1 or end == -1:
+            return None
+        loc = json.loads(raw_text[start : end + 1])
 
         # Reject low confidence
         if loc.get("confidence") == "low":
