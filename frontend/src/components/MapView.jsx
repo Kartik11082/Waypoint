@@ -30,6 +30,7 @@ export default function MapView({
     onPinPlace,
     pin,
     correctPin = null,
+    correctBounds = null,
     opponentPins = [],
     interactive = true,
 }) {
@@ -37,6 +38,7 @@ export default function MapView({
     const mapRef = useRef(null);
     const playerMarkerRef = useRef(null);
     const correctMarkerRef = useRef(null);
+    const correctRectRef = useRef(null);
     const lineRef = useRef(null);
     const opponentMarkersRef = useRef([]);
     const onPinPlaceRef = useRef(onPinPlace);
@@ -102,12 +104,33 @@ export default function MapView({
             map.removeLayer(correctMarkerRef.current);
             correctMarkerRef.current = null;
         }
+        if (correctRectRef.current) {
+            map.removeLayer(correctRectRef.current);
+            correctRectRef.current = null;
+        }
         if (lineRef.current) {
             map.removeLayer(lineRef.current);
             lineRef.current = null;
         }
 
         if (correctPin) {
+            // Draw bounding box rectangle if available
+            if (correctBounds) {
+                const bounds = [
+                    [correctBounds.sw_lat, correctBounds.sw_lng],
+                    [correctBounds.ne_lat, correctBounds.ne_lng],
+                ];
+
+                correctRectRef.current = L.rectangle(bounds, {
+                    color: '#3a8c5c',
+                    weight: 2,
+                    fillColor: '#3a8c5c',
+                    fillOpacity: 0.12,
+                    dashArray: '6 4',
+                }).addTo(map);
+            }
+
+            // Center point marker
             correctMarkerRef.current = L.marker([correctPin.lat, correctPin.lng], {
                 icon: correctIcon,
                 interactive: false,
@@ -119,13 +142,23 @@ export default function MapView({
                     { color: '#e05c2a', weight: 1.5, dashArray: '4 6', opacity: 0.5 }
                 ).addTo(map);
 
-                map.fitBounds(
-                    [[pin.lat, pin.lng], [correctPin.lat, correctPin.lng]],
-                    { padding: [80, 80], animate: true }
-                );
+                // Fit map to player pin + full bounding box (or just both pins)
+                if (correctBounds) {
+                    const allBounds = L.latLngBounds([
+                        [correctBounds.sw_lat, correctBounds.sw_lng],
+                        [correctBounds.ne_lat, correctBounds.ne_lng],
+                        [pin.lat, pin.lng],
+                    ]);
+                    map.fitBounds(allBounds, { padding: [60, 60], animate: true });
+                } else {
+                    map.fitBounds(
+                        [[pin.lat, pin.lng], [correctPin.lat, correctPin.lng]],
+                        { padding: [80, 80], animate: true }
+                    );
+                }
             }
         }
-    }, [correctPin]);
+    }, [correctPin, correctBounds]);
 
     // Opponent pins
     useEffect(() => {

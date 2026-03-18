@@ -106,14 +106,24 @@ export function useGame() {
         const story = storiesRef.current[currentRound];
 
         // Player score
-        const result = await postScore({
+        const scoreBody = {
             lat: pin.lat,
             lng: pin.lng,
             correct_lat: story.lat,
             correct_lng: story.lng,
             clues_used: cluesRevealed,
             seconds_taken: 60 - timer.timeLeft,
-        });
+        };
+
+        // If story has bounding box, add it
+        if (story.sw_lat !== undefined) {
+            scoreBody.sw_lat = story.sw_lat;
+            scoreBody.sw_lng = story.sw_lng;
+            scoreBody.ne_lat = story.ne_lat;
+            scoreBody.ne_lng = story.ne_lng;
+        }
+
+        const result = await postScore(scoreBody);
 
         playerScoreRef.current += result.score;
 
@@ -151,6 +161,12 @@ export function useGame() {
             verdict: result.verdict,
             verdictClass: result.verdict_class,
             breakdown: result.breakdown,
+            correctBounds: story.sw_lat !== undefined ? {
+                sw_lat: story.sw_lat,
+                sw_lng: story.sw_lng,
+                ne_lat: story.ne_lat,
+                ne_lng: story.ne_lng,
+            } : null,
         });
 
         // Delay result card so map line draws first

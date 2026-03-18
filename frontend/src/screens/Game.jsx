@@ -159,6 +159,12 @@ export default function Game({
                     onPinPlace={onPinPlace}
                     pin={pin}
                     correctPin={submitted && story ? { lat: story.lat, lng: story.lng } : null}
+                    correctBounds={submitted && story?.sw_lat !== undefined ? {
+                        sw_lat: story.sw_lat,
+                        sw_lng: story.sw_lng,
+                        ne_lat: story.ne_lat,
+                        ne_lng: story.ne_lng,
+                    } : null}
                     interactive={!submitted}
                 />
 

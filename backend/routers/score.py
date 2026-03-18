@@ -34,6 +34,18 @@ def get_verdict(score):
     return "OFF THE MARK", "miss"
 
 
+def distance_to_box(lat, lng, sw_lat, sw_lng, ne_lat, ne_lng):
+    """Distance in km from a point to the nearest edge of a bounding box.
+    Returns 0 if the point is inside the box."""
+    if sw_lat <= lat <= ne_lat and sw_lng <= lng <= ne_lng:
+        return 0.0
+
+    # Clamp to nearest point on box edge
+    clamped_lat = max(sw_lat, min(lat, ne_lat))
+    clamped_lng = max(sw_lng, min(lng, ne_lng))
+    return haversine(lat, lng, clamped_lat, clamped_lng)
+
+
 @router.post("/score")
 async def calculate_score(request: Request):
     body = await request.json()
@@ -53,7 +65,19 @@ async def calculate_score(request: Request):
     correct_lng = float(body["correct_lng"])
     seconds_taken = float(body["seconds_taken"])
 
-    distance_km = round(haversine(lat, lng, correct_lat, correct_lng), 1)
+    # Use bounding box distance if available, else point-to-point
+    bbox_fields = ["sw_lat", "sw_lng", "ne_lat", "ne_lng"]
+    has_bbox = all(body.get(f) is not None for f in bbox_fields)
+
+    if has_bbox:
+        distance_km = round(distance_to_box(
+            lat, lng,
+            float(body["sw_lat"]), float(body["sw_lng"]),
+            float(body["ne_lat"]), float(body["ne_lng"]),
+        ), 1)
+    else:
+        distance_km = round(haversine(lat, lng, correct_lat, correct_lng), 1)
+
     dist_score = math.exp(-distance_km / 2000)
     clue_mult = CLUE_MULTIPLIERS[clues_used]
     time_mult = 1.10 if seconds_taken < 15 else 1.05 if seconds_taken < 30 else 1.00
