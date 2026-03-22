@@ -4,6 +4,7 @@ import Loading from './screens/Loading';
 import Game from './screens/Game';
 import Result from './screens/Result';
 import Final from './screens/Final';
+import Stats from './screens/Stats';
 import { useGame } from './hooks/useGame';
 import { usePlayerStats } from './hooks/usePlayerStats';
 
@@ -59,7 +60,7 @@ function AppInner() {
     return (
         <>
             {game.screen === 'splash' && (
-                <Splash onStart={game.startGame} />
+                <Splash onStart={game.startGame} onNavigate={game.navigate} />
             )}
 
             {game.screen === 'loading' && (
@@ -78,6 +79,11 @@ function AppInner() {
                     onSubmit={game.submitGuess}
                     timeLeft={game.timeLeft}
                     roundNumber={game.currentRound + 1}
+                    playerName={game.playerName}
+                    leaderboard={game.leaderboard}
+                    leaderboardLoading={game.leaderboardLoading}
+                    myRank={game.myRank}
+                    totalPlayers={game.totalPlayers}
                     scores={game.scores}
                     submitted={game.submitted}
                 />
@@ -103,6 +109,10 @@ function AppInner() {
                     onPlayAgain={() => window.location.reload()}
                     playerStats={playerStats ? { ...playerStats, global: globalStats } : null}
                 />
+            )}
+
+            {game.screen === 'stats' && (
+                <Stats onBack={() => game.navigate('splash')} />
             )}
         </>
     );

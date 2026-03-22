@@ -29,7 +29,7 @@ function ReturningPlayerSection({ hasPlayed, stats, playedToday, stagger }) {
     );
 }
 
-function NameInputSection({ stagger, inputRef, name, setName, handleKeyDown, canStart, handleSubmit, playedToday }) {
+function NameInputSection({ stagger, inputRef, name, setName, handleKeyDown, canStart, handleSubmit, playedToday, onNavigate }) {
     return (
         <div
             className="animate-fadeUp"
@@ -61,11 +61,17 @@ function NameInputSection({ stagger, inputRef, name, setName, handleKeyDown, can
             >
                 {playedToday ? "SEE TODAY'S RESULTS" : 'ENTER THE FIELD'}
             </button>
+            <button
+                className="stats-link"
+                onClick={() => onNavigate('stats')}
+            >
+                ◈ VIEW STATS
+            </button>
         </div>
     );
 }
 
-export default function Splash({ onStart }) {
+export default function Splash({ onStart, onNavigate }) {
     const [name, setName] = useState('');
     const inputRef = useRef(null);
     const { stats, loading } = usePlayerStats();
@@ -155,7 +161,8 @@ export default function Splash({ onStart }) {
                 handleKeyDown={handleKeyDown} 
                 canStart={canStart} 
                 handleSubmit={handleSubmit} 
-                playedToday={playedToday} 
+                playedToday={playedToday}
+                onNavigate={onNavigate}
             />
 
             <p

@@ -1,101 +1,90 @@
-export default function Leaderboard({ scores }) {
-    if (!scores || scores.length === 0) {
-        return (
-            <div style={{ padding: 'var(--s4) var(--s5)', flexShrink: 0 }}>
-                <span className="label" style={{ marginBottom: 'var(--s3)', display: 'block' }}>
-                    LEADERBOARD
-                </span>
-                <span
-                    style={{
-                        fontFamily: 'var(--font-ui)',
-                        fontSize: '11px',
-                        color: 'var(--muted)',
-                        textAlign: 'center',
-                        display: 'block',
-                    }}
-                >
-                    WAITING...
-                </span>
-            </div>
-        );
-    }
+import { useEffect, useRef } from 'react';
 
-    const maxScore = Math.max(...scores.map((s) => s.score), 1);
+export default function Leaderboard({
+    entries = [],
+    loading = false,
+    myName = 'ANONYMOUS',
+    myRank = null,
+    totalPlayers = null,
+}) {
+    const listRef = useRef(null);
+
+    useEffect(() => {
+        if (listRef.current) {
+            listRef.current.scrollTop = 0;
+        }
+    }, [entries]);
 
     return (
         <div style={{ padding: 'var(--s4) var(--s5)', flexShrink: 0 }}>
-            <span className="label" style={{ marginBottom: 'var(--s3)', display: 'block' }}>
-                LEADERBOARD
-            </span>
-            <div
-                style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 'var(--s2)',
-                    maxHeight: '160px',
-                    overflowY: 'auto',
-                }}
-            >
-                {scores.map((entry, i) => {
-                    const highlight = entry.isPlayer;
-                    const nameColor = highlight ? 'var(--gold)' : 'var(--primary)';
-                    const barColor = highlight ? 'var(--gold)' : 'var(--border)';
-
-                    return (
-                        <div
-                            key={entry.name + i}
-                            className={`lb-row ${highlight ? 'lb-you' : ''} ${entry.verified ? 'lb-verified' : ''}`}
-                            style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 'var(--s2)',
-                                fontFamily: 'var(--font-ui)',
-                                fontSize: '11px',
-                            }}
-                        >
-                            <span className="lb-rank" style={{ width: '16px', color: 'var(--muted)', flexShrink: 0 }}>
-                                {i + 1}
-                            </span>
-                            <span
-                                style={{
-                                    flex: 1,
-                                    color: nameColor,
-                                    fontWeight: highlight ? 500 : 400,
-                                    whiteSpace: 'nowrap',
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                }}
-                            >
-                                {entry.name}
-                            </span>
-                            <div style={{ flex: 1, height: '2px', background: 'var(--surface2)' }}>
-                                <div
-                                    style={{
-                                        height: '100%',
-                                        width: `${(entry.score / maxScore) * 100}%`,
-                                        background: barColor,
-                                        transition: 'width 0.6s ease',
-                                    }}
-                                />
-                            </div>
-                            <span
-                                style={{
-                                    minWidth: '52px',
-                                    textAlign: 'right',
-                                    color: nameColor,
-                                }}
-                            >
-                                {entry.score}
-                            </span>
-                        </div>
-                    );
-                })}
+            <div className="lb-header">
+                <span className="label">TODAY'S LEADERBOARD</span>
+                {totalPlayers > 0 && (
+                    <span className="lb-total">
+                        {totalPlayers} PLAYER{totalPlayers !== 1 ? 'S' : ''}
+                    </span>
+                )}
             </div>
-            
-            {scores.some((s) => s.verified) && (
-                <div className="lb-legend">
-                    <span style={{ color: 'var(--green)' }}>·</span>
-                    <span className="lb-legend-text">VERIFIED DEVICE</span>
+
+            {loading && entries.length === 0 && (
+                <div className="lb-skeleton">
+                    <div className="lb-skel-row animate-pulse" />
+                    <div className="lb-skel-row animate-pulse" />
+                    <div className="lb-skel-row animate-pulse" />
+                </div>
+            )}
+
+            {!loading && entries.length === 0 && !myRank && (
+                <div className="lb-empty">
+                    BE THE FIRST TO PLAY TODAY
+                </div>
+            )}
+
+            {entries.length > 0 && (
+                <div className="lb-list" ref={listRef}>
+                    {entries.slice(0, 10).map((entry) => {
+                        const isMe = entry.display_name === myName;
+                        const key = `${entry.id_prefix || entry.display_name}-${entry.rank}`;
+
+                        return (
+                            <div
+                                key={key}
+                                className={`lb-row ${isMe ? 'lb-you' : ''}`}
+                            >
+                                <span className="lb-rank">#{entry.rank}</span>
+                                <span className="lb-name">
+                                    {entry.display_name}
+                                    {entry.verified && (
+                                        <span className="lb-verified-dot" title="Verified device">
+                                            ·
+                                        </span>
+                                    )}
+                                </span>
+                                <span className="lb-score">
+                                    {Number(entry.total_score || 0).toLocaleString()}
+                                </span>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+
+            {myRank && myRank > 10 && (
+                <>
+                    <div className="lb-divider-dots">· · ·</div>
+                    <div className="lb-row lb-you lb-my-rank">
+                        <span className="lb-rank">#{myRank}</span>
+                        <span className="lb-name">{myName}</span>
+                        <span className="lb-rank-of">of {totalPlayers}</span>
+                    </div>
+                </>
+            )}
+
+            {!loading && entries.length === 0 && myRank && (
+                <div className="lb-row lb-you">
+                    <span className="lb-rank">#{myRank}</span>
+                    <span className="lb-name">{myName}</span>
+                    <span className="lb-score">—</span>
                 </div>
             )}
         </div>

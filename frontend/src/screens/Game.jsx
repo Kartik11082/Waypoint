@@ -91,8 +91,15 @@ export default function Game({
     timeLeft,
     roundNumber,
     scores,
+    leaderboard = scores || [],
+    leaderboardLoading = false,
+    myRank = null,
+    totalPlayers = null,
+    playerName = '',
     submitted,
 }) {
+    const myName = playerName || localStorage.getItem('waypoint-display-name') || 'ANONYMOUS';
+
     return (
         <div
             style={{
@@ -150,7 +157,13 @@ export default function Game({
                     </button>
                 </div>
                 <div className="divider" />
-                <Leaderboard scores={scores} />
+                <Leaderboard
+                    entries={leaderboard}
+                    loading={leaderboardLoading}
+                    myName={myName}
+                    myRank={myRank}
+                    totalPlayers={totalPlayers}
+                />
             </div>
 
             {/* Right Panel — Map */}

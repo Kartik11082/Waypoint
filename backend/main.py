@@ -13,7 +13,8 @@ from fastapi.responses import JSONResponse
 
 load_dotenv(find_dotenv(usecwd=True))
 
-from routers import clues, score, stories, stats, wireroom
+from routers import clues, leaderboard, score, stories, stats, wireroom
+from routers.meta import router as meta_router
 
 # ── Rate limiting state ─────────────────────────────────
 _rate_limit_store: dict[str, list[float]] = defaultdict(list)
@@ -25,10 +26,6 @@ RATE_WINDOW = 60
 # Initializes database schema before accepting traffic
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    from database import init_db
-
-    init_db()
-
     print("Waypoint backend running on :8000")
     print("  POST /api/score")
     print("  GET  /api/stories")
@@ -44,12 +41,11 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 # ── CORS ────────────────────────────────────────────────
-allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,
-    allow_methods=["GET", "POST"],
-    allow_headers=["Content-Type"],
+    allow_origins=["*"],    # tighten after first deploy
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "X-Device-Fingerprint"],
 )
 
 
@@ -79,6 +75,8 @@ async def rate_limit(request: Request, call_next):
 app.include_router(score.router, prefix="/api")
 app.include_router(stories.router, prefix="/api")
 app.include_router(clues.router, prefix="/api")
+app.include_router(leaderboard.router, prefix="/api")
+app.include_router(meta_router, prefix="/api")
 app.include_router(wireroom.router, prefix="/api")
 app.include_router(stats.router, prefix="/api")
 
@@ -88,3 +86,9 @@ app.include_router(stats.router, prefix="/api")
 @app.get("/health")
 def health():
     return {"status": "ok", "version": "1.0.0"}
+
+
+# Lambda handler — Mangum wraps FastAPI for AWS Lambda
+# lifespan="off" because Lambda manages its own lifecycle
+from mangum import Mangum
+handler = Mangum(app, lifespan="off")

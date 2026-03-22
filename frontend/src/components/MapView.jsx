@@ -34,12 +34,22 @@ function useInitMap(containerRef, interactiveRef, onPinPlaceRef) {
         const map = L.map(containerRef.current, {
             center: [20, 10],
             zoom: 2,
+            minZoom: 2,
+            maxZoom: 10,
             zoomControl: false,
             attributionControl: false,
+            maxBounds: [[-90, -180], [90, 180]],
+            maxBoundsViscosity: 1.0,
+            worldCopyJump: false,
         });
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            noWrap: true,
+            bounds: [[-90, -180], [90, 180]],
+        }).addTo(map);
         map.getPane('tilePane').style.filter = 'grayscale(1) brightness(0.35) contrast(1.1)';
+        map.fitWorld({ animate: false });
+        map.getContainer().style.background = '#1a1a18';
 
         map.on('click', (e) => {
             if (!interactiveRef.current) return;
@@ -133,7 +143,14 @@ function useCorrectMarker(mapRef, correctPin, correctBounds, pin) {
                         [correctBounds.ne_lat, correctBounds.ne_lng],
                         [pin.lat, pin.lng],
                     ]);
-                    map.fitBounds(allBounds, { padding: [60, 60], animate: true });
+                    map.fitBounds(allBounds, {
+                        padding: [60, 60],
+                        animate: true,
+                        maxZoom: 8,
+                    });
+                    if (map.getZoom() < 2) {
+                        map.setZoom(2);
+                    }
                 } else {
                     map.fitBounds(
                         [[pin.lat, pin.lng], [correctPin.lat, correctPin.lng]],
@@ -215,5 +232,14 @@ export default function MapView({
     useOpponentMarkers(mapRef, opponentPins);
     useWireMarkerLayer(mapRef, wirePins);
 
-    return <div ref={containerRef} style={{ width: '100%', height: '100%' }} />;
+    return (
+        <div
+            ref={containerRef}
+            style={{
+                width: '100%',
+                height: '100%',
+                background: '#1a1a18',
+            }}
+        />
+    );
 }

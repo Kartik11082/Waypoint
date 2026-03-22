@@ -30,6 +30,55 @@ export const postScore = (body) =>
         body: JSON.stringify(body)
     });
 
+export const submitLeaderboard = (body) =>
+    apiFetch('/api/leaderboard/submit', {
+        method: 'POST',
+        body: JSON.stringify(body),
+    });
+
+export const getDailyLeaderboard = () =>
+    apiFetch('/api/leaderboard/daily');
+
+export const getMyLeaderboardPosition = () =>
+    apiFetch('/api/leaderboard/me');
+
+const META_CACHE_KEY = 'waypoint-meta-cache';
+const META_CACHE_TTL = 6 * 60 * 60 * 1000; // 6 hours in ms
+
+export async function getMeta() {
+    // Check memory cache first (same session, instant)
+    if (_metaCache && Date.now() - _metaCache.ts < META_CACHE_TTL) {
+        return _metaCache.data;
+    }
+
+    // Check localStorage (survives page refresh)
+    try {
+        const stored = localStorage.getItem(META_CACHE_KEY);
+        if (stored) {
+            const parsed = JSON.parse(stored);
+            if (Date.now() - parsed.ts < META_CACHE_TTL) {
+                _metaCache = parsed; // warm memory cache too
+                return parsed.data;
+            }
+        }
+    } catch (e) {}
+
+    // Cache miss — fetch from backend
+    const data = await apiFetch('/api/meta');
+
+    // Write to both caches
+    const entry = { data, ts: Date.now() };
+    _metaCache = entry;
+    try {
+        localStorage.setItem(META_CACHE_KEY, JSON.stringify(entry));
+    } catch (e) {}
+
+    return data;
+}
+
+// Module-level memory cache — lives for the browser session
+let _metaCache = null;
+
 // ── Wire Room ──────────────────────────────────────────
 
 export function recordPin(body) {
@@ -62,5 +111,3 @@ export const postResult = (body) =>
         method: 'POST',
         body: JSON.stringify(body)
     });
-
-

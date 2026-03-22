@@ -31,12 +31,18 @@ frontend/.eslintcache
 
 # --- AWS & Environment ---
 .aws/
+.aws-sam/
 credentials
 *.pem
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+frontend/.env.production
+
+# --- Local Temp / Debug Artifacts ---
+.tmp-*.json
+.tmp-*.log
 
 # --- Build & IDE ---
 .vscode/

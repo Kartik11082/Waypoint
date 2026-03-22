@@ -1,5 +1,5 @@
 fastapi
-uvicorn[standard]
+mangum
 httpx
 boto3
 python-dotenv

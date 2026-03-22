@@ -1,22 +1,31 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { getStories, getClues, postScore, recordPin, postResult, getPlayerId } from '../api/client';
+import {
+    getStories,
+    getClues,
+    postScore,
+    recordPin,
+    postResult,
+    getPlayerId,
+    submitLeaderboard,
+    getDailyLeaderboard,
+    getMyLeaderboardPosition,
+} from '../api/client';
 import { useTimer } from './useTimer';
 
 /*
- * useGame — Central game state and logic
+ * useGame - Central game state and logic
  *
  * State flow:
- *   splash → loading → game → result → final
+ *   splash -> loading -> game -> result -> final
  *
  * Key behaviors:
  *   - Fetches 5 daily stories on start (same for all players today)
- *   - Bots simulate guesses when player submits
  *   - Fingerprint + device hash prevents same-day replay
  *   - Stats and leaderboard are fire-and-forget (never block game)
  *
  * Dependencies:
- *   api/client.js — all network calls
- *   useTimer.js   — round countdown
+ *   api/client.js - all network calls
+ *   useTimer.js   - round countdown
  */
 
 const LOADING_MESSAGES = [
@@ -70,7 +79,10 @@ export function useGame() {
     const [submitted, setSubmitted] = useState(false);
     const [roundResult, setRoundResult] = useState(null);
     const [roundResults, setRoundResults] = useState([]);
-    const [scores, setScores] = useState([]);
+    const [leaderboard, setLeaderboard] = useState([]);
+    const [leaderboardLoading, setLeaderboardLoading] = useState(false);
+    const [myRank, setMyRank] = useState(null);
+    const [totalPlayers, setTotalPlayers] = useState(null);
 
     const playerScoreRef = useRef(0);
     const storiesRef = useRef([]);
@@ -82,11 +94,30 @@ export function useGame() {
 
     const timer = useTimer(60, handleExpire);
 
-    const buildScoreboard = () => {
-        return [
-            { name: playerName, score: playerScoreRef.current, isPlayer: true }
-        ];
-    };
+    async function fetchLeaderboard() {
+        setLeaderboardLoading(true);
+        try {
+            const data = await getDailyLeaderboard();
+            setLeaderboard(data.entries || []);
+            setTotalPlayers(data.total_players || 0);
+        } catch (e) {
+            console.warn('[leaderboard] fetch failed:', e);
+        } finally {
+            setLeaderboardLoading(false);
+        }
+    }
+
+    async function fetchMyPosition() {
+        try {
+            const data = await getMyLeaderboardPosition();
+            if (data.played_today) {
+                setMyRank(data.rank);
+                setTotalPlayers(data.total_players);
+            }
+        } catch (e) {
+            console.warn('[leaderboard] position fetch failed:', e);
+        }
+    }
 
     const startRound = async (roundIndex) => {
         setCurrentRound(roundIndex);
@@ -105,6 +136,7 @@ export function useGame() {
         }
 
         setScreen('game');
+        await fetchLeaderboard();
         timer.start();
     };
 
@@ -113,9 +145,11 @@ export function useGame() {
         setScreen('loading');
         playerScoreRef.current = 0;
         setRoundResults([]);
-        setScores([]);
+        setLeaderboard([]);
+        setLeaderboardLoading(false);
+        setMyRank(null);
+        setTotalPlayers(null);
 
-        // Cycle loading messages
         let msgIndex = 0;
         setLoadingMessage(LOADING_MESSAGES[0]);
         msgIntervalRef.current = setInterval(() => {
@@ -123,8 +157,6 @@ export function useGame() {
             setLoadingMessage(LOADING_MESSAGES[msgIndex]);
         }, 2000);
 
-        // Prevent replay: check localStorage before fetching stories
-        // Device hash check happens server-side on leaderboard submit
         try {
             const data = await getStories();
             const storyList = (data.stories || data).slice(0, 5);
@@ -155,17 +187,13 @@ export function useGame() {
         setSubmitted(true);
 
         const story = storiesRef.current[currentRound];
-
-        // Player score
         const scoreBody = buildScorePayload(pin, story, cluesRevealed, timer.timeLeft);
 
         const result = await postScore(scoreBody);
 
         playerScoreRef.current += result.score;
+        const totalScore = playerScoreRef.current;
 
-        // Fire and forget — stats failure must never block the game
-        // Bots guess based on accuracy — higher accuracy =
-        // smaller random offset from correct location
         recordPin({
             story_id: story.id,
             lat: pin.lat,
@@ -174,14 +202,9 @@ export function useGame() {
             score: result.score,
         });
 
-        // Build round result record
         const roundRecord = buildRoundRecord(currentRound, story, result, cluesRevealed, clues);
-
         const newRoundResults = [...roundResults, roundRecord];
         setRoundResults(newRoundResults);
-
-        const scoreboard = buildScoreboard();
-        setScores(scoreboard);
 
         setRoundResult({
             score: result.score,
@@ -197,13 +220,23 @@ export function useGame() {
             } : null,
         });
 
-        // Delay result card so map line draws first
+        const displayName =
+            localStorage.getItem('waypoint-display-name') || 'ANONYMOUS';
+
+        submitLeaderboard({
+            player_id: getPlayerId(),
+            display_name: displayName,
+            total_score: totalScore,
+        }).then(() => {
+            fetchLeaderboard();
+            fetchMyPosition();
+        }).catch(() => {});
+
         setTimeout(() => setScreen('result'), 1500);
     };
 
     const nextRound = () => {
         if (currentRound >= 4) {
-            // Fire and forget — stats failure must never block the game
             postResult({
                 player_id: getPlayerId(),
                 total_score: playerScoreRef.current,
@@ -213,6 +246,9 @@ export function useGame() {
                     score: r.score,
                     verdict: r.verdict,
                 })),
+            }).then(async () => {
+                await fetchLeaderboard();
+                await fetchMyPosition();
             }).catch(() => {});
             setScreen('final');
         } else {
@@ -220,7 +256,6 @@ export function useGame() {
         }
     };
 
-    // Keyboard shortcuts
     const screenRef = useRef(screen);
     const pinRef = useRef(pin);
     const submittedRef = useRef(submitted);
@@ -245,8 +280,11 @@ export function useGame() {
         timer.reset();
     };
 
+    function navigate(nextScreen) {
+        setScreen(nextScreen);
+    }
+
     return {
-        // state
         playerName,
         screen,
         loadingMessage,
@@ -257,15 +295,25 @@ export function useGame() {
         submitted,
         roundResult,
         roundResults,
-        scores,
+        leaderboard,
+        leaderboardLoading,
+        myRank,
+        totalPlayers,
+        scores: [
+            {
+                name: playerName || 'ANONYMOUS',
+                score: playerScoreRef.current,
+                isPlayer: true,
+            },
+        ],
         timeLeft: timer.timeLeft,
         currentStory: stories[currentRound] || null,
-        // actions
         startGame,
         revealClue,
         placePin,
         submitGuess,
         nextRound,
         playAgain,
+        navigate,
     };
 }
