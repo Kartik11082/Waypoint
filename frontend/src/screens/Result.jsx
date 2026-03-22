@@ -109,6 +109,7 @@ function ArticleSection({ cityCountry, story }) {
                 {story.headline}
             </div>
             <div
+                className="result-article"
                 style={{
                     fontFamily: 'var(--font-body)',
                     fontSize: '12px',
@@ -158,25 +159,10 @@ export default function Result({
 
     return (
         <div
-            style={{
-                position: 'fixed',
-                inset: 0,
-                background: 'rgba(12, 12, 10, 0.88)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                zIndex: 1000,
-            }}
+            className="result-overlay"
         >
             <div
-                className="animate-fadeUp"
-                style={{
-                    background: 'var(--surface)',
-                    width: '540px',
-                    maxHeight: '85vh',
-                    overflowY: 'auto',
-                    border: '1px solid var(--border)',
-                }}
+                className="animate-fadeUp result-card"
             >
                 {/* Top Section */}
                 <VerdictSection

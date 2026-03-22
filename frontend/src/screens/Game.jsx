@@ -5,34 +5,9 @@ import Leaderboard from '../components/Leaderboard';
 
 function PanelHeader({ roundNumber }) {
     return (
-        <div
-            style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: 'var(--s4) var(--s5)',
-                borderBottom: '1px solid var(--border)',
-            }}
-        >
-            <span
-                style={{
-                    fontFamily: 'var(--font-display)',
-                    fontSize: '22px',
-                    color: 'var(--primary)',
-                }}
-            >
-                Waypoint
-            </span>
-            <span
-                style={{
-                    fontFamily: 'var(--font-ui)',
-                    fontSize: '10px',
-                    color: 'var(--muted)',
-                    letterSpacing: '0.1em',
-                }}
-            >
-                ROUND {roundNumber} / 5
-            </span>
+        <div className="game-header">
+            <span className="game-title">Waypoint</span>
+            <span className="game-round-label">ROUND {roundNumber} / 5</span>
         </div>
     );
 }
@@ -50,7 +25,7 @@ function PinStatus({ pin }) {
 
     const formatCoord = (val, posLabel, negLabel) => {
         const abs = Math.abs(val).toFixed(4);
-        return `${abs}°${val >= 0 ? posLabel : negLabel}`;
+        return `${abs}�${val >= 0 ? posLabel : negLabel}`;
     };
 
     return (
@@ -82,11 +57,11 @@ function PinStatus({ pin }) {
 
 export default function Game({
     story,
-    clues, // consider moving to context if this grows
-    cluesRevealed, // consider moving to context if this grows
-    onRevealClue, // consider moving to context if this grows
+    clues,
+    cluesRevealed,
+    onRevealClue,
     pin,
-    onPinPlace, // consider moving to context if this grows
+    onPinPlace,
     onSubmit,
     timeLeft,
     roundNumber,
@@ -101,25 +76,8 @@ export default function Game({
     const myName = playerName || localStorage.getItem('waypoint-display-name') || 'ANONYMOUS';
 
     return (
-        <div
-            style={{
-                display: 'grid',
-                gridTemplateColumns: '400px 1fr',
-                height: '100vh',
-                overflow: 'hidden',
-            }}
-        >
-            {/* Left Panel */}
-            <div
-                style={{
-                    background: 'var(--surface)',
-                    borderRight: '1px solid var(--border)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    height: '100%',
-                    overflow: 'hidden',
-                }}
-            >
+        <div className="game-layout">
+            <div className="left-panel">
                 <PanelHeader roundNumber={roundNumber} />
                 <TimerBar timeLeft={timeLeft} />
                 {clues ? (
@@ -144,30 +102,35 @@ export default function Game({
                         ))}
                     </div>
                 )}
+
                 <div className="divider" />
-                <PinStatus pin={pin} />
-                <div style={{ padding: '0 var(--s5) var(--s4)' }}>
-                    <button
-                        className="btn-primary"
-                        style={{ width: '100%' }}
-                        disabled={!pin || submitted}
-                        onClick={onSubmit}
-                    >
-                        SUBMIT Waypoint
-                    </button>
+                <div className="submit-section">
+                    <PinStatus pin={pin} />
+                    <div style={{ padding: '0 var(--s5) var(--s4)' }}>
+                        <button
+                            className="btn-primary"
+                            style={{ width: '100%' }}
+                            disabled={!pin || submitted}
+                            onClick={onSubmit}
+                        >
+                            SUBMIT Waypoint
+                        </button>
+                    </div>
                 </div>
+
                 <div className="divider" />
-                <Leaderboard
-                    entries={leaderboard}
-                    loading={leaderboardLoading}
-                    myName={myName}
-                    myRank={myRank}
-                    totalPlayers={totalPlayers}
-                />
+                <div className="leaderboard-section">
+                    <Leaderboard
+                        entries={leaderboard}
+                        loading={leaderboardLoading}
+                        myName={myName}
+                        myRank={myRank}
+                        totalPlayers={totalPlayers}
+                    />
+                </div>
             </div>
 
-            {/* Right Panel — Map */}
-            <div style={{ position: 'relative', height: '100%' }}>
+            <div className="game-map-panel">
                 <MapView
                     onPinPlace={onPinPlace}
                     pin={pin}
@@ -182,35 +145,15 @@ export default function Game({
                 />
 
                 {!pin && (
-                    <div
-                        style={{
-                            position: 'absolute',
-                            top: 'var(--s4)',
-                            left: '50%',
-                            transform: 'translateX(-50%)',
-                            fontFamily: 'var(--font-ui)',
-                            fontSize: '10px',
-                            color: 'var(--muted)',
-                            letterSpacing: '0.1em',
-                            background: 'rgba(12, 12, 10, 0.8)',
-                            padding: 'var(--s2) var(--s4)',
-                            pointerEvents: 'none',
-                            whiteSpace: 'nowrap',
-                        }}
-                    >
+                    <div className="map-instruction">
                         CLICK MAP TO DROP YOUR PIN
                     </div>
                 )}
 
                 <div
+                    className="timer-display"
                     style={{
-                        position: 'absolute',
-                        top: 'var(--s4)',
-                        right: 'var(--s4)',
-                        fontFamily: 'var(--font-display)',
-                        fontSize: '48px',
                         color: timeLeft <= 10 ? 'var(--red)' : 'var(--primary)',
-                        lineHeight: 1,
                         animation: timeLeft <= 10 ? 'timerUrgent 1s infinite' : 'none',
                     }}
                 >

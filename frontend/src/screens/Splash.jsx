@@ -32,13 +32,12 @@ function ReturningPlayerSection({ hasPlayed, stats, playedToday, stagger }) {
 function NameInputSection({ stagger, inputRef, name, setName, handleKeyDown, canStart, handleSubmit, playedToday, onNavigate }) {
     return (
         <div
-            className="animate-fadeUp"
+            className="name-entry animate-fadeUp"
             style={{
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
                 gap: 'var(--s4)',
-                width: '280px',
                 ...stagger(280),
             }}
         >
@@ -114,10 +113,9 @@ export default function Splash({ onStart, onNavigate }) {
             </p>
 
             <h1
-                className="animate-fadeUp"
+                className="animate-fadeUp splash-logo"
                 style={{
                     fontFamily: 'var(--font-display)',
-                    fontSize: 'clamp(80px, 12vw, 140px)',
                     color: 'var(--primary)',
                     letterSpacing: '0.06em',
                     lineHeight: 0.9,

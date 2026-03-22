@@ -224,28 +224,42 @@ export default function Final({ playerName, scores, roundResults, onPlayAgain, p
                 </p>
 
                 {/* Single Player Result Display */}
-                <div
-                    style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        marginBottom: 'var(--s7)',
-                        background: 'var(--surface)',
-                        padding: 'var(--s5) var(--s8)',
-                        border: '1px solid var(--border)',
-                    }}
-                >
-                    <span className="label" style={{ marginBottom: 'var(--s2)' }}>FINAL SCORE</span>
-                    <span
+                <div className="final-podium" style={{ marginBottom: 'var(--s7)', width: '100%', display: 'flex', justifyContent: 'center' }}>
+                    <div
+                        className="podium-slot"
                         style={{
-                            fontFamily: 'var(--font-display)',
-                            fontSize: '64px',
-                            color: 'var(--gold)',
-                            lineHeight: 1,
+                            display: 'flex',
+                            alignItems: 'center',
+                            background: 'var(--surface)',
+                            padding: 'var(--s5) var(--s8)',
+                            border: '1px solid var(--border)',
                         }}
                     >
-                        {totalScore.toLocaleString()}
-                    </span>
+                        <span className="label" style={{ marginBottom: 'var(--s2)' }}>FINAL SCORE</span>
+                        <span
+                            className="podium-bar"
+                            style={{
+                                height: '6px',
+                                width: '100%',
+                                maxWidth: '240px',
+                                background: 'var(--gold)',
+                                marginBottom: 'var(--s3)',
+                            }}
+                        />
+                        <span
+                            style={{
+                                fontFamily: 'var(--font-display)',
+                                fontSize: '64px',
+                                color: 'var(--gold)',
+                                lineHeight: 1,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                            }}
+                        >
+                            {totalScore.toLocaleString()}
+                        </span>
+                    </div>
                 </div>
 
                 <CategoryPerformance playerStats={playerStats} />

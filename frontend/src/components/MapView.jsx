@@ -50,6 +50,8 @@ function useInitMap(containerRef, interactiveRef, onPinPlaceRef) {
         map.getPane('tilePane').style.filter = 'grayscale(1) brightness(0.35) contrast(1.1)';
         map.fitWorld({ animate: false });
         map.getContainer().style.background = '#1a1a18';
+        map.getContainer().style.touchAction = 'none';
+        map.getContainer().addEventListener('touchstart', () => {}, { passive: true });
 
         map.on('click', (e) => {
             if (!interactiveRef.current) return;
@@ -239,6 +241,7 @@ export default function MapView({
                 width: '100%',
                 height: '100%',
                 background: '#1a1a18',
+                minHeight: '200px',
             }}
         />
     );

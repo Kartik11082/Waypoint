@@ -70,10 +70,10 @@ export default function CluePanel({ clues, revealed, onReveal, submitted }) {
 
     return (
         <div
+            className="clue-section"
             style={{
                 display: 'flex',
                 flexDirection: 'column',
-                padding: 'var(--s4) var(--s5)',
                 gap: 'var(--s4)',
                 flexShrink: 0,
             }}
